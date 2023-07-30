@@ -1,0 +1,202 @@
+```{r message=FALSE, warning=FALSE}
+# Insert the function to *tidy up* the code when they are printed out
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+
+# Load libraries
+
+## Load a set of packages inclusing: broom, cli, crayon, dbplyr , dplyr, dtplyr, forcats,
+#googledrive, googlesheets4, ggplot2, haven, hms, httr, jsonlite, lubridate , magrittr, 
+#modelr, pillar, purrr, readr, readxl, reprex, rlang, rstudioapi, rvest, stringr, tibble, 
+#tidyr, xml2
+library(tidyverse)
+
+# Provide a set of estimators for models and (robust) covariance matrices and tests for panel data econometrics, 
+library(plm)
+
+## Functions, data sets, examples, demos, and vignettes for the book Christian Kleiber and Achim Zeileis (2008), 
+#Applied Econometrics with R
+library(AER)
+
+## provides geoms for ggplot2 to repel overlapping text labels.
+library(ggrepel)
+library(stargazer)
+library(gridExtra)
+```
+
+```{r load data, echo = FALSE, include=FALSE}
+library(data.table)
+
+load(file="~/school/MIDS-271/mids-w271-oliviapratt/homework/lab3/driving.RData", verbose = TRUE)
+
+## please comment these calls in your work 
+head(data)
+desc
+```
+
+
+# (30 points, total) Build and Describe the Data 
+
+1. (5 points) Load the data and produce useful features. Specifically: 
+    - Produce a new variable, called `speed_limit` that re-encodes the data that is in `sl55`, `sl65`, `sl70`, `sl75`, and `slnone`; 
+    
+```{r recode speed limit columns}    
+data <- data %>%
+  mutate(speed_limit =
+           case_when(
+             data$sl55 > .5 ~ 55,
+             data$sl65 > .5 ~ 65,
+             data$sl70 > .5 ~ 70,
+             data$sl75 > .5 ~ 75,
+             data$slnone > .5 ~ 0,
+             data$year == 1996 & data$state == 6 ~ 75,
+             data$year == 1996 & data$state == 11 ~ 70,
+             data$year == 1995 & data$state == 21 ~ 65,
+             data$year == 1997 & data$state == 24 ~ 70,
+             data$year == 1988 & data$state == 47 ~ 65
+           ))
+
+```
+
+    - Produce a new variable, called `year_of_observation` that re-encodes the data that is in `d80`, `d81`, ... , `d04`. 
+    
+```{r recode year}    
+data <- data %>% 
+  mutate(year_of_observation =
+           case_when(
+             data$d80 == 1 ~ 1980,
+             data$d81 == 1 ~ 1981,
+             data$d82 == 1 ~ 1982,
+             data$d83 == 1 ~ 1983,
+             data$d84 == 1 ~ 1984,
+             data$d85 == 1 ~ 1985,
+             data$d86 == 1 ~ 1986,
+             data$d87 == 1 ~ 1987,
+             data$d88 == 1 ~ 1988,
+             data$d89 == 1 ~ 1989,
+             data$d90 == 1 ~ 1990,
+             data$d91 == 1 ~ 1991,
+             data$d92 == 1 ~ 1992,
+             data$d93 == 1 ~ 1993,
+             data$d94 == 1 ~ 1994,
+             data$d95 == 1 ~ 1995,
+             data$d96 == 1 ~ 1996,
+             data$d97 == 1 ~ 1997,
+             data$d98 == 1 ~ 1998,
+             data$d99 == 1 ~ 1999,
+             data$d00 == 1 ~ 2000,
+             data$d01 == 1 ~ 2001,
+             data$d02 == 1 ~ 2002,
+             data$d03 == 1 ~ 2003,
+             data$d04 == 1 ~ 2004,
+             TRUE ~ 00000
+           )
+)
+data %>% filter(year_of_observation == 00000)   
+```    
+    - Produce a new variable for each of the other variables that are one-hot encoded (i.e. `bac*` variable series). 
+
+```{r recode other one-hot vars}
+data <- data %>%
+  mutate(
+    blood_alc =
+      case_when(
+        bac10 > .5 ~ .1,
+        bac08 > .5 ~ .08,
+        bac08 == 0 & bac10 == 0 ~ 0,
+        bac10 > bac08 ~ .1,
+        TRUE ~ .08
+      )
+  )
+
+```
+
+    - Rename these variables to sensible names that are legible to a reader of your analysis. For example, the dependent variable as provided is called, `totfatrte`. Pick something more sensible, like, `total_fatalities_rate`. There are few enough of these variables to change, that you should change them for all the variables in the data. (You will thank yourself later.)
+
+```{r rename columns}    
+old_names <- c("seatbelt", "minage", "zerotol", "gdl", "perse", "totfat",
+               "nghtfat", "wkndfat", "totfatpvm", "nghtfatpvm", "wkndfatpvm",
+               "statepop", "totfatrte", "nghtfatrte", "wkndfatrte", "vehicmiles",
+               "unem", "perc14_24", "vehicmilespc")
+
+new_names <- c("seatbelt_law", "min_drink_age", "zero_tol", "grad_driver_license", "per_se",
+               "tot_fat", "tot_night_fat", "tot_wknd_fat", "tot_fat_per_mil_miles",
+               "tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
+               "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
+               "miles_traveled_b", "unemployment", "percent_pop_14-24", "vehic_miles_pc")
+
+data <- data %>%
+  setnames(old = old_names, new = new_names)
+```
+
+```{r select columns}
+data <- data %>%
+  select("year", "state", "seatbelt_law", "min_drink_age", "zero_tol",
+         "grad_driver_license", "per_se", "tot_fat", "tot_night_fat", "tot_wknd_fat",
+         "tot_fat_per_mil_miles","tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
+         "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
+         "miles_traveled_b", "unemployment", "percent_pop_14-24", "vehic_miles_pc",
+         "speed_limit", "year_of_observation", "blood_alc")
+
+#data %>% filter(year != year_of_observation)
+```
+2. (5 points) Provide a description of the basic structure of the dataset. What is this data? How, where, and when is it collected? Is the data generated through a survey or some other method? Is the data that is presented a sample from the population, or is it a *census* that represents the entire population? Minimally, this should include:
+    - How is the our dependent variable of interest `total_fatalities_rate` defined? 
+    
+> The long-panel data being reviewed here has `r ncol(data)` columns and `r nrow(data)` row, where each row is returning metrics having to do with traffic incidents in each state (excluding Alaska and Hawaii) from the years 1980 through 2004, at an annual granularity. Specifically, we will be focusing on traffic fatalities in each state to see if regulations like blood alcohol limits, speed limits, and so on appear to impact the rate of fatalities per state. The rate of fatalities is calculated as the number of fatalities per 100,000 people. This dataset also includes columns that show how many of these fatalities happened while driving at night or on the weekend. 
+    
+3. (20 points) Conduct a very thorough EDA, which should include both graphical and tabular techniques, on the dataset, including both the dependent variable `total_fatalities_rate` and the potential explanatory variables. Minimally, this should include: 
+    - How is the our dependent variable of interest `total_fatalities_rate` defined? 
+    - What is the average of `total_fatalities_rate` in each of the years in the time period covered in this dataset? 
+
+```{r}
+data %>% 
+  select(year, state) %>%
+  table()
+```
+```{r}
+data %>%
+  is.pconsecutive()
+
+pdim(data)
+```
+```{r,warning=FALSE,echo=FALSE, fig.height=6, fig.width=12}
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
+  geom_line(aes(color = state)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
+  geom_line(aes(color = state)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = as.integer(year), y = total_fatalities_rate)) +
+  geom_line(aes(color = state)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
+  geom_line(aes(color = state)) +
+  labs(x = "Year",  y = "Fatality rate") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = state),
+                   nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
+```
