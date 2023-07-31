@@ -33,7 +33,11 @@ load(file="~/school/MIDS-271/mids-w271-oliviapratt/homework/lab3/driving.RData",
 head(data)
 desc
 ```
-
+```{r add states abbreviations}
+states <- read.csv("~/school/MIDS-271/mids-w271-oliviapratt/homework/lab3/states.csv")
+states <- cbind(states, row = row_number(states))
+states
+```
 
 # (30 points, total) Build and Describe the Data 
 
@@ -137,8 +141,9 @@ data <- data %>%
          "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
          "miles_traveled_b", "unemployment", "percent_pop_14-24", "vehic_miles_pc",
          "speed_limit", "year_of_observation", "blood_alc")
+data <- merge(x = data, y = states, by.x = "state", by.y = "row")
 
-#data %>% filter(year != year_of_observation)
+data
 ```
 2. (5 points) Provide a description of the basic structure of the dataset. What is this data? How, where, and when is it collected? Is the data generated through a survey or some other method? Is the data that is presented a sample from the population, or is it a *census* that represents the entire population? Minimally, this should include:
     - How is the our dependent variable of interest `total_fatalities_rate` defined? 
@@ -160,43 +165,306 @@ data %>%
 
 pdim(data)
 ```
+
+```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
+p6<- data %>%
+  filter(as.integer(state) <= 14 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3) +
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p7<-data %>%
+  filter(as.integer(state) > 14 & as.integer(state) <= 26 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p8<-data %>%
+  filter(as.integer(state) > 26 &as.integer(state) <= 38 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p9<- data %>%
+  filter(as.integer(state) > 38 ) %>%
+  ggplot(aes(x =year, y = total_fatalities_rate)) +
+  geom_line()+
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+
+grid.arrange(p6,p7,p8, p9, nrow = 2, ncol = 2)
+```
+
+```{r}
+mean_fat <- data %>%
+  group_by(year) %>%
+  summarise(mean = mean(total_fatalities_rate))
+
+plot(mean_fat, type = "l", xlab = "Year", ylab = "Mean", main = "Average Fatality Rate from 1980 - 2004") 
+```
+
 ```{r,warning=FALSE,echo=FALSE, fig.height=6, fig.width=12}
 
 p2<- data %>%
   filter(as.integer(state) <= 12 ) %>%
-  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
-  geom_line(aes(color = state)) +
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
-                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none")
 
 p3<- data %>%
    filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
-  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
-  geom_line(aes(color = state)) +
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
-                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none")
 
 p4<- data %>%
   filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
-  ggplot(aes(x = as.integer(year), y = total_fatalities_rate)) +
-  geom_line(aes(color = state)) +
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
-                   aes(label = state), nudge_x = .75,na.rm = TRUE) +
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none")
 
 p5<- data %>%
   filter(as.integer(state) > 36 ) %>%
-  ggplot(aes(x = as.Date(year,"%Y"), y = total_fatalities_rate)) +
-  geom_line(aes(color = state)) +
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate") +
-  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = state),
+  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
                    nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none")
 
 grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
+```
+
+```{r}
+all_means <- data %>%
+  group_by(year) %>%
+  summarise(avg_total_fatality_rate = mean(total_fatalities_rate), avg_drinking_age = mean(min_drink_age),
+            avg_pop = mean(state_pop), avg_unemployment = mean(unemployment), avg_perc_pop = mean(`percent_pop_14-24`),
+            avg_speed_limit = mean(speed_limit), avg_blood_alc_limit = mean(blood_alc))
+
+all_means %>%
+  ggplot(aes(x = year)) +
+  # geom_line(aes(x=year, y=avg_total_fatality_rate)) +
+   geom_line(aes(x=year, y=avg_drinking_age)) +
+  # geom_line(aes(x=year, y=avg_unemployment)) +
+   geom_line(aes(x=year, y=avg_perc_pop, color="red")) 
+  # geom_line(aes(x=year, y=avg_speed_limit)) 
+  # geom_line(aes(x=year, y=avg_blood_alc_limit, color="red"))
+```
+
+```{r,warning=FALSE,echo=FALSE, fig.height=6, fig.width=12}
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = year, y = miles_traveled_b)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = year, y = miles_traveled_b)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = year, y = miles_traveled_b)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = year, y = miles_traveled_b)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
+                   nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
+```
+
+```{r,warning=FALSE,echo=FALSE, fig.height=6, fig.width=12}
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
+                   nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none")
+
+grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
+```
+
+```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
+p6<- data %>%
+  filter(as.integer(state) <= 14 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3) +
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p7<-data %>%
+  filter(as.integer(state) > 14 & as.integer(state) <= 26 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p8<-data %>%
+  filter(as.integer(state) > 26 &as.integer(state) <= 38 ) %>%
+  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  geom_line() +
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+p9<- data %>%
+  filter(as.integer(state) > 38 ) %>%
+  ggplot(aes(x =year, y = `percent_pop_14-24`)) +
+  geom_line()+
+  facet_wrap(~ Abbreviation, nrow = 3)+
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+
+grid.arrange(p6,p7,p8, p9, nrow = 2, ncol = 2)
+```
+
+```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
+data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = total_fatalities_rate)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Fatality rate")
+
+data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = `percent_pop_14-24`)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Percent pop 14-24")
+
+data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = min_drink_age)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Min Drinking Age")
+
+data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = unemployment)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Unemployment Rate")
+
+data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = blood_alc)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Unemployment Rate")
+```
+
+```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
+p18<- data %>%
+  filter(as.integer(state) <= 14 ) %>%
+  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  geom_point() +
+  facet_wrap(~ Abbreviation, nrow = 3,scales = "free") +
+  labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
+
+p19<- data %>%
+  filter(as.integer(state) > 14 & as.integer(state) <= 26 ) %>%
+  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  geom_point() +
+  facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
+  labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
+
+p20<- data %>%
+  filter(as.integer(state) > 26 &as.integer(state) <= 38 ) %>%
+  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  geom_point() +
+  facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
+  labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
+
+p21<- data %>%
+  filter(as.integer(state) > 38 ) %>%
+  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  geom_point()+
+  facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
+  labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
+
+grid.arrange(p18,p19,p20, p21, nrow = 2, ncol = 2)
+```
+```{r}
+library(corrplot)
+
+data %>%
+  filter(is.na(Abbreviation))
+
+all_means %>% 
+  corrplot()
 ```
