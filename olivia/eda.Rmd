@@ -121,13 +121,13 @@ data <- data %>%
 old_names <- c("seatbelt", "minage", "zerotol", "gdl", "perse", "totfat",
                "nghtfat", "wkndfat", "totfatpvm", "nghtfatpvm", "wkndfatpvm",
                "statepop", "totfatrte", "nghtfatrte", "wkndfatrte", "vehicmiles",
-               "unem", "perc14_24", "vehicmilespc")
+               "unem", "perc14_24", "vehicmilespc", "sbprim")
 
 new_names <- c("seatbelt_law", "min_drink_age", "zero_tol", "grad_driver_license", "per_se",
                "tot_fat", "tot_night_fat", "tot_wknd_fat", "tot_fat_per_mil_miles",
                "tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
                "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
-               "miles_traveled_b", "unemployment", "percent_pop_14-24", "vehic_miles_pc")
+               "miles_traveled_b", "unemployment", "percent_pop_14_24", "vehic_miles_pc", "primary_seatbelt")
 
 data <- data %>%
   setnames(old = old_names, new = new_names)
@@ -135,12 +135,12 @@ data <- data %>%
 
 ```{r select columns}
 data <- data %>%
-  select("year", "state", "seatbelt_law", "min_drink_age", "zero_tol",
+  dplyr::select("year", "state", "seatbelt_law", "min_drink_age", "zero_tol",
          "grad_driver_license", "per_se", "tot_fat", "tot_night_fat", "tot_wknd_fat",
          "tot_fat_per_mil_miles","tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
          "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
-         "miles_traveled_b", "unemployment", "percent_pop_14-24", "vehic_miles_pc",
-         "speed_limit", "year_of_observation", "blood_alc")
+         "miles_traveled_b", "unemployment", "percent_pop_14_24", "vehic_miles_pc",
+         "speed_limit", "year_of_observation", "blood_alc", "primary_seatbelt" )
 data <- merge(x = data, y = states, by.x = "state", by.y = "row")
 
 data
@@ -156,7 +156,7 @@ data
 
 ```{r}
 data %>% 
-  select(year, state) %>%
+  dplyr::select(year, state) %>%
   table()
 ```
 ```{r}
@@ -260,7 +260,7 @@ grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
 all_means <- data %>%
   group_by(year) %>%
   summarise(avg_total_fatality_rate = mean(total_fatalities_rate), avg_drinking_age = mean(min_drink_age),
-            avg_pop = mean(state_pop), avg_unemployment = mean(unemployment), avg_perc_pop = mean(`percent_pop_14-24`),
+            avg_pop = mean(state_pop), avg_unemployment = mean(unemployment), avg_perc_pop = mean(`percent_pop_14_24`),
             avg_speed_limit = mean(speed_limit), avg_blood_alc_limit = mean(blood_alc))
 
 all_means %>%
@@ -318,7 +318,7 @@ grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
 
 p2<- data %>%
   filter(as.integer(state) <= 12 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
@@ -327,7 +327,7 @@ p2<- data %>%
 
 p3<- data %>%
    filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
@@ -336,7 +336,7 @@ p3<- data %>%
 
 p4<- data %>%
   filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate")+
   geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
@@ -345,7 +345,7 @@ p4<- data %>%
 
 p5<- data %>%
   filter(as.integer(state) > 36 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Fatality rate") +
   geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
@@ -358,7 +358,7 @@ grid.arrange(p2,p3,p4, p5, nrow = 2, ncol = 2)
 ```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
 p6<- data %>%
   filter(as.integer(state) <= 14 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line() +
   facet_wrap(~ Abbreviation, nrow = 3) +
   labs(x = "Year",  y = "Fatality rate") +
@@ -367,7 +367,7 @@ p6<- data %>%
 
 p7<-data %>%
   filter(as.integer(state) > 14 & as.integer(state) <= 26 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line() +
   facet_wrap(~ Abbreviation, nrow = 3)+
   labs(x = "Year",  y = "Fatality rate") +
@@ -376,7 +376,7 @@ p7<-data %>%
 
 p8<-data %>%
   filter(as.integer(state) > 26 &as.integer(state) <= 38 ) %>%
-  ggplot(aes(x = year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x = year, y = `percent_pop_14_24`)) +
   geom_line() +
   facet_wrap(~ Abbreviation, nrow = 3)+
   labs(x = "Year",  y = "Fatality rate") +
@@ -385,7 +385,7 @@ p8<-data %>%
 
 p9<- data %>%
   filter(as.integer(state) > 38 ) %>%
-  ggplot(aes(x =year, y = `percent_pop_14-24`)) +
+  ggplot(aes(x =year, y = `percent_pop_14_24`)) +
   geom_line()+
   facet_wrap(~ Abbreviation, nrow = 3)+
   labs(x = "Year",  y = "Fatality rate") +
@@ -405,7 +405,7 @@ data %>%
 
 data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = `percent_pop_14-24`)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = `percent_pop_14_24`)) +
   geom_boxplot() +
   labs(x = "States",  y = "Percent pop 14-24")
 
@@ -431,40 +431,135 @@ data %>%
 ```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=12}
 p18<- data %>%
   filter(as.integer(state) <= 14 ) %>%
-  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  ggplot(aes(x = `percent_pop_14_24`, y = total_fatalities_rate)) +
   geom_point() +
   facet_wrap(~ Abbreviation, nrow = 3,scales = "free") +
   labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
 
 p19<- data %>%
   filter(as.integer(state) > 14 & as.integer(state) <= 26 ) %>%
-  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  ggplot(aes(x = `percent_pop_14_24`, y = total_fatalities_rate)) +
   geom_point() +
   facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
   labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
 
 p20<- data %>%
   filter(as.integer(state) > 26 &as.integer(state) <= 38 ) %>%
-  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  ggplot(aes(x = `percent_pop_14_24`, y = total_fatalities_rate)) +
   geom_point() +
   facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
   labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
 
 p21<- data %>%
   filter(as.integer(state) > 38 ) %>%
-  ggplot(aes(x = `percent_pop_14-24`, y = total_fatalities_rate)) +
+  ggplot(aes(x = `percent_pop_14_24`, y = total_fatalities_rate)) +
   geom_point()+
   facet_wrap(~ Abbreviation, nrow = 3,scales = "free")+
   labs(x = "Percent of Pop. between 14-24",  y = "Fatality rate")
 
 grid.arrange(p18,p19,p20, p21, nrow = 2, ncol = 2)
 ```
+
 ```{r}
-library(corrplot)
+within.model <- plm(total_fatalities_rate ~ year + 
+                                              blood_alc +
+                                              per_se + 
+                                              primary_seatbelt + 
+                                              speed_limit + 
+                                              grad_driver_license +               
+                                              log(`percent_pop_14_24`) + 
+                                              log(unemployment) + 
+                                              log(vehic_miles_pc), 
+                data = data, index=c("state", "year"), model="within")
 
-data %>%
-  filter(is.na(Abbreviation))
 
-all_means %>% 
-  corrplot()
+pool.model <- plm(total_fatalities_rate ~ year + 
+                                              blood_alc +
+                                              per_se + 
+                                              primary_seatbelt +  
+                                              speed_limit + 
+                                              grad_driver_license +               
+                                              log(`percent_pop_14_24`) + 
+                                              log(unemployment) + 
+                                              log(vehic_miles_pc), 
+                data = data, index=c("state", "year"), model="pooling")
+
+fd.model <- plm(total_fatalities_rate ~ year + 
+                                              blood_alc +
+                                              per_se + 
+                                              primary_seatbelt +  
+                                              speed_limit + 
+                                              grad_driver_license +               
+                                              log(`percent_pop_14_24`) + 
+                                              log(unemployment) + 
+                                              log(vehic_miles_pc), 
+                data = data, index=c("state", "year"), model="fd")
+
+between.model <- plm(total_fatalities_rate ~ year + 
+                                              blood_alc +
+                                              per_se + 
+                                              primary_seatbelt + 
+                                              speed_limit + 
+                                              grad_driver_license +               
+                                              log(`percent_pop_14_24`) + 
+                                              log(unemployment) + 
+                                              log(vehic_miles_pc), 
+                data = data, index=c("state", "year"), model="between")
+
+random.model <- plm(total_fatalities_rate ~ year + 
+                                              blood_alc +
+                                              per_se + 
+                                              primary_seatbelt +  
+                                              speed_limit + 
+                                              grad_driver_license +               
+                                              log(`percent_pop_14_24`) + 
+                                              log(unemployment) + 
+                                              log(vehic_miles_pc), 
+                data = data, index=c("state", "year"), model="random")
+
+
+stargazer(pool.model, fd.model, between.model, within.model, random.model, type = "text",
+          omit.stat = c("ser","f","adj.rsq"), dep.var.labels = "",
+          column.labels = c("Pooled", "FD", "Between", "Within", "Random"))
 ```
+
+```{r}
+pFtest(within.model, pool.model)
+```
+Our pFtest returns a significant p value, meaning that we reject the null hypothesis. We should include the state and time fixed effects in our model.
+
+```{r}
+pwfdtest(fd.model, data=data, index=c("state", "year"), h0="fe")
+```
+```{r}
+pwfdtest(fd.model, data=data, index=c("state", "year"), h0="fd")
+
+```
+
+```{r}
+phtest(within.model, random.model)
+
+```
+
+- What do you estimate for coefficients on the blood alcohol variables? How do 
+the coefficients on the blood alcohol variables change, if at all? 
+
+> The fixed effect model estimates that blood alcohol has a coefficient of -6.163. In action, this means that for a unit increase in blood alcohol limit, the fatality rate will decrease by approximately 6 fatalities per 100,000 people. However in our case, blood alcohol is measured in hundreths and tenths rather than in unitary increments, so a full unit increase isn't likely to take place. In the Pooled model, the coefficient for blood alcohol is -8.736, which is the largest impact out of the five models. The coefficient for the First Difference model is -3.092, the smallest impact of the models. The between model has a similar coefficient of -3.313, and lastly the Random Effects model has a coefficient of -6.610, very simlilar to the Fixed Effect Model. All of these coefficients are significant.
+
+- What do you estimate for coefficients on per se laws? How do the coefficients 
+on per se laws change, if at all? 
+
+> The Fixed Effect model estimates that the coefficient for the per-se parameter is -1.219. In our data, the per se parameter is a one-hot-encoded variable with some values being between zero and one, in cases where states took on the law mid-year. In the case where a state does have per se laws in a given year, our model estimates that the rate of fatalities will decrease by 1.2 per 100,000 people. The is the largest impact of the five models, with the coefficients of the Pooled Effect, First Difference, Between, and Random Effect being -0.881, -0.669, -0.467, and -1.178 respectively. All of these coefficients are significant.
+
+- What do you estimate for coefficients on primary seat-belt laws? How do the 
+coefficients on primary seatbelt laws change, if at all? 
+
+The primary seat belt law variable is also a Boolean, indicating whether a state uses primary seat belt laws or secondary. For the Pooled model, the coefficient is not significant and is -0.322, a fairly small impact. Similarly, the coefficient for the First Difference model is -0.201, and the coefficient for the Between model is -0.491. This variable is not significant in either model. However, the coefficients for both the Fixed Effect and Random Effect models are both significant, being -0.867 and -0.833 respectively. 
+
+Which set of estimates do you think is more reliable? Why do you think this? 
+
+The Wooldridge first-difference test for serial correlation in panels returns significant p values for both the Fixed Effect (within) and First Difference models, however the p value for the Fixed Effect model is far more significant. This leads us to believe that the Fixed Effect model is more reliable than the First Difference and Pooled models. Moving on, the outcome of the Hausmen test is not significant, meaning we do not reject the null hypothesis that random effects are appropriate, suggesting that we should not use the Fixed Effect model. Because of these outcomes, the estimates created by the Random Effects model will be the most reliable.
+
+- What assumptions are needed in each of these models? 
+
+- Are these assumptions reasonable in the current context?
