@@ -1,0 +1,266 @@
+
+---
+title: 'Lab 3: Panel Models'
+subtitle: 'US Traffic Fatalities: 1980 - 2004'
+output: 
+  bookdown::pdf_document2: default
+---
+
+```{r load packages, echo=FALSE, message=FALSE}
+rm(list = ls())
+library(tidyverse)
+library(knitr)
+library(data.table)
+library(plm)
+library(ggrepel)
+library(ggplot2)
+```
+
+# U.S. traffic fatalities: 1980-2004
+
+<https://github.com/srilamaiti/w271_summer_2023_elizabeth_emily_michael_olivia_srila_lab3>
+
+In this lab, we are asking you to answer the following **causal** question:
+
+> **"Do changes in traffic laws affect traffic fatalities?"**
+
+To answer this question, please complete the tasks specified below using the data provided in `data/driving.Rdata`. This data includes 25 years of data that cover changes in various state drunk driving, seat belt, and speed limit laws.
+
+Specifically, this data set contains data for the 48 continental U.S. states from 1980 through 2004. Various driving laws are indicated in the data set, such as the alcohol level at which drivers are considered legally intoxicated. There are also indicators for "per se" laws---where licenses can be revoked without a trial---and seat belt laws. A few economics and demographic variables are also included. The description of the each of the variables in the dataset is also provided in the dataset.
+
+```{r load data, echo = TRUE}
+load(file="~/MIDS/Summer23/w271_summer_2023_elizabeth_emily_michael_olivia_srila_lab3/data/driving.RData")
+
+## please comment these calls in your work 
+glimpse(data)
+desc
+
+unique(data$state)
+```
+
+# (30 points, total) Build and Describe the Data
+
+1.  (5 points) Load the data and produce useful features. Specifically:
+    -   Produce a new variable, called `speed_limit` that re-encodes the data that is in `sl55`, `sl65`, `sl70`, `sl75`, and `slnone`;
+    -   Produce a new variable, called `year_of_observation` that re-encodes the data that is in `d80`, `d81`, ... , `d04`.
+    -   Produce a new variable for each of the other variables that are one-hot encoded (i.e. `bac*` variable series).
+    -   Rename these variables to sensible names that are legible to a reader of your analysis. For example, the dependent variable as provided is called, `totfatrte`. Pick something more sensible, like, `total_fatalities_rate`. There are few enough of these variables to change, that you should change them for all the variables in the data. (You will thank yourself later.)
+
+```{r}
+data <- data %>% 
+  mutate(year_of_observation =
+           case_when(
+             data$d80 == 1 ~ 1980,
+             data$d81 == 1 ~ 1981,
+             data$d82 == 1 ~ 1982,
+             data$d83 == 1 ~ 1983,
+             data$d84 == 1 ~ 1984,
+             data$d85 == 1 ~ 1985,
+             data$d86 == 1 ~ 1986,
+             data$d87 == 1 ~ 1987,
+             data$d88 == 1 ~ 1988,
+             data$d89 == 1 ~ 1989,
+             data$d90 == 1 ~ 1990,
+             data$d91 == 1 ~ 1991,
+             data$d92 == 1 ~ 1992,
+             data$d93 == 1 ~ 1993,
+             data$d94 == 1 ~ 1994,
+             data$d95 == 1 ~ 1995,
+             data$d96 == 1 ~ 1996,
+             data$d97 == 1 ~ 1997,
+             data$d98 == 1 ~ 1998,
+             data$d99 == 1 ~ 1999,
+             data$d00 == 1 ~ 2000,
+             data$d01 == 1 ~ 2001,
+             data$d02 == 1 ~ 2002,
+             data$d03 == 1 ~ 2003,
+             data$d04 == 1 ~ 2004,
+             TRUE ~ 00000
+           )
+)
+data %>% filter(year_of_observation == 00000)   
+
+data <- data %>%
+  mutate(
+    blood_alc =
+      case_when(
+        bac10 > .5 ~ .1,
+        bac08 > .5 ~ .08,
+        bac08 == 0 & bac10 == 0 ~ 0,
+        bac10 > bac08 ~ .1,
+        TRUE ~ .08
+      )
+  )
+data <- data %>%
+  mutate(speed_limit =
+           case_when(
+             data$sl55 > .5 ~ 55,
+             data$sl65 > .5 ~ 65,
+             data$sl70 > .5 ~ 70,
+             data$sl75 > .5 ~ 75,
+             data$slnone > .5 ~ 0,
+             data$year == 1996 & data$state == 6 ~ 75,
+             data$year == 1996 & data$state == 11 ~ 70,
+             data$year == 1995 & data$state == 21 ~ 65,
+             data$year == 1997 & data$state == 24 ~ 70,
+             data$year == 1988 & data$state == 47 ~ 65
+           ))
+
+
+old_names <- c("seatbelt", "minage", "zerotol", "gdl", "perse", "totfat",
+               "nghtfat", "wkndfat", "totfatpvm", "nghtfatpvm", "wkndfatpvm",
+               "statepop", "totfatrte", "nghtfatrte", "wkndfatrte", "vehicmiles",
+               "unem", "perc14_24", "vehicmilespc", "sbprim", "sbsecon")
+
+new_names <- c("seatbelt_law", "min_drink_age", "zero_tol", "grad_driver_license", "per_se",
+               "tot_fat", "tot_night_fat", "tot_wknd_fat", "tot_fat_per_mil_miles",
+               "tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
+               "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
+               "miles_traveled_b", "unemployment", "percent_pop_14_24", "vehic_miles_pc", "primary_seatbelt", "secondary_seatbelt")
+
+data <- data %>%
+  setnames(old = old_names, new = new_names)
+```
+
+```{r select columns}
+data <- data %>%
+  dplyr::select("year", "state", "seatbelt_law", "min_drink_age", "zero_tol",
+         "grad_driver_license", "per_se", "tot_fat", "tot_night_fat", "tot_wknd_fat",
+         "tot_fat_per_mil_miles","tot_nght_fat_per_mil_miles", "tot_wknd_fat_per_mil_miles",
+         "state_pop", "total_fatalities_rate", "tot_nght_fat_rate", "tot_wknd_fat_rate",
+         "miles_traveled_b", "unemployment", "percent_pop_14_24", "vehic_miles_pc",
+         "speed_limit", "year_of_observation", "blood_alc", "primary_seatbelt", "secondary_seatbelt")
+# data <- merge(x = data, y = states, by.x = "state", by.y = "row")
+# 
+# data
+```
+
+
+```{r}
+data$state <- as.character(data$state)
+data <- data %>% 
+  mutate(state = dplyr::recode(state,
+    "1" = "AL",
+    "3" = "AZ",
+    "4" = "AR",
+    "5" = "CA",
+    "6" = "CO",
+    "7" = "CT",
+    "8" = "DE",
+    "10" = "FL",
+    "11" = "GA",
+    "13" = "ID",
+    "14" = "IL",
+    "15" = "IN",
+    "16" = "IA",
+    "17" = "KS",
+    "18" = "KY",
+    "19" = "LA",
+    "20" = "ME",
+    "21" = "MD",
+    "22" = "MA",
+    "23" = "MI",
+    "24" = "MN",
+    "25" = "MS",
+    "26" = "MO",
+    "27" = "MT",
+    "28" = "NE",
+    "29" = "NV",
+    "30" = "NH",
+    "31" = "NJ",
+    "32" = "NM",
+    "33" = "NY",
+    "34" = "NC",
+    "35" = "ND",
+    "36" = "OH",
+    "37" = "OK",
+    "38" = "OR",
+    "39" = "PA",
+    "40" = "RI",
+    "41" = "SC",
+    "42" = "SD",
+    "43" = "TN",
+    "44" = "TX",
+    "45" = "UT",
+    "46" = "VT",
+    "47" = "VA",
+    "48" = "WA",
+    "49" = "WV",
+    "50" = "WI",
+    "51" = "WY"
+    ))
+
+```
+
+
+# ((15 points) Preliminary Model (Elizabeth)
+Estimate a linear regression model of *totfatrte* on a set of dummy variables for the years 1981 through 2004 and interpret what you observe. In this section, you should address the following tasks:
+
+-   Why is fitting a linear model a sensible starting place?
+-   What does this model explain, and what do you find in this model?
+-   Did driving become safer over this period? Please provide a detailed explanation.
+-   What, if any, are the limitation of this model. In answering this, please consider **at least**:
+    -   Are the parameter estimates reliable, unbiased estimates of the truth? Or, are they biased due to the way that the data is structured?
+    -   Are the uncertainty estimate reliable, unbiased estimates of sampling based variability? Or, are they biased due to the way that the data is structured?
+
+A linear model is a sensible starting place because we have non-independence in this data set. This dataset also contains some variability, since we have repeated measures taken over time, (i.e, finding the fatality rate of each state every year). A linear model can help us determine the relationships between different variables and the outcome and allow us to better understand the source of variability within the dataset.
+
+```{r}
+lsdv_mod <- plm(total_fatalities_rate ~  min_drink_age + state, index=c("state", "year"), model = "within",data=data)
+summary(lsdv_mod)
+```
+
+We incorporate dummy variables for the year and for all states. The model doesn't include any other variable, so omitted variable bias could be present, however, the results imply that minimum drinking age does have an impact on the total fatality rate within states.
+
+
+# (15 points) Expanded Model (Emily)
+
+Expand the **Preliminary Model** by adding variables related to the following concepts: 
+
+- Blood alcohol levels 
+  No transformation
+- Per se laws
+  No transformation
+- Primary seat belt laws (Note that if a law was enacted sometime within a year the fraction of the year is recorded in place of the zero-one indicator.)
+  No transformation
+- Secondary seat belt laws 
+  No transformation
+- Speed limits faster than 70 
+  Need to transform this variable - the original speed limit variable just had speed limits, but now want limits over 70
+- Graduated drivers licenses 
+  
+- Percent of the population between 14 and 24 years old
+  Log transform
+- Unemployment rate
+  Log transform
+- Vehicle miles driven per capita. 
+  Log?
+
+If it is appropriate, include transformations of these variables. Please carefully explain carefully your rationale, which should be based on your EDA, behind any transformation you made. If no transformation is made, explain why transformation is not needed.
+
+```{r}
+# create speed limit over 70 variable
+data = data %>% mutate(speed_lim_70 = ifelse(speed_limit == 55 | speed_limit == 65, 0, 1))
+
+```
+
+```{r}
+
+exp_mod <- plm(log(total_fatalities_rate) ~ year + min_drink_age + state + blood_alc + per_se +
+           primary_seatbelt + secondary_seatbelt + speed_lim_70 + grad_driver_license +
+           log(percent_pop_14_24) + log(unemployment) + log(vehic_miles_pc),
+           index=c("state", "year"), model = "within", data=data)
+
+summary(exp_mod)
+
+```
+Based on the expanded model, the vehicle miles driven per capita, unemployment rate, percent of population between 14 and 24, as well as per se laws and each year of observation were statistically significant.  
+
+- How are the blood alcohol variables defined? Interpret the coefficients that you estimate for this concept. 
+- Do *per se laws* have a negative effect on the fatality rate? 
+- Does having a primary seat belt law? 
+
+
+
+
+
