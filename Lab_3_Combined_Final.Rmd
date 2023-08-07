@@ -65,6 +65,8 @@ load(file="~/271/w271_summer_2023_elizabeth_emily_michael_olivia_srila_lab3/data
 #desc
 ```
 
+### Preliminary Data Look
+
 We have added state abbreviation in the data along with DC.
 ```{r, adding state abbriviation, warning=FALSE, message=FALSE}
 # Adding state abbriviation
@@ -91,12 +93,12 @@ data <- data %>%
 ```
 
 
-# (30 points, total) Build and Describe the Data 
+# Build and Describe the Data 
 
 ### Load the data and produce useful features.
 
-    - Produce a new variable, called `speed_limit` that re-encodes the data 
-    that is in `sl55`, `sl65`, `sl70`, `sl75`, and `slnone`; 
+Producing a new variable, called `speed_limit` that re-encodes the data 
+that is in `sl55`, `sl65`, `sl70`, `sl75`, and `slnone`;.
     
 ```{r recode speed limit columns, warning=FALSE, message=FALSE}    
 data <- data %>%
@@ -116,8 +118,8 @@ data <- data %>%
 
 ```
 
-    - Produce a new variable, called `year_of_observation` that re-encodes the 
-    data that is in `d80`, `d81`, ... , `d04`. 
+Producing a new variable, called `year_of_observation` that re-encodes the 
+data that is in `d80`, `d81`, ... , `d04`. 
     
 ```{r recode year, warning=FALSE, message=FALSE}    
 data <- data %>% 
@@ -154,8 +156,8 @@ data <- data %>%
 # data %>% filter(year_of_observation == 00000)   
 ```    
     
-    - Produce a new variable for each of the other variables that are one-hot 
-    encoded (i.e. `bac*` variable series). 
+Producing a new variable for each of the other variables that are one-hot 
+encoded (i.e. `bac*` variable series). 
 
 ```{r recode other one-hot vars, warning=FALSE, message=FALSE}
 data <- data %>%
@@ -172,12 +174,7 @@ data <- data %>%
 
 ```
 
-    - Rename these variables to sensible names that are legible to a reader of 
-    your analysis. For example, the dependent variable as provided is called, 
-    `totfatrte`. Pick something more sensible, like, `total_fatalities_rate`. 
-    There are few enough of these variables to change, that you should change 
-    them for all the variables in the data. (You will thank yourself later.)
-
+Renaming the variables to more legible names.
 
 ```{r, renaming to meaningful columns, warning=FALSE, message=FALSE}
 # rename the variables to sensible names
@@ -395,7 +392,8 @@ p3<- data %>%
   ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Vehicle Miles Per Capita")+
-  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+  geom_label_repel(data = filter(data, as.integer(state) > 12 &
+                                   as.integer(state) <= 24  & year == 1984),
                    aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(0,20000)
 
@@ -404,7 +402,8 @@ p4<- data %>%
   ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Vehicle Miles Per Capita")+
-  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+  geom_label_repel(data = filter(data, as.integer(state) > 24 & 
+                                   as.integer(state) <= 36 & year == 1984),
                    aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(0,20000)
 
@@ -413,7 +412,8 @@ p5<- data %>%
   ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Vehicle Miles Per Capita") +
-  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
+  geom_label_repel(data = filter(data, as.integer(state) > 36 &
+                                   year == 1984),aes(label = Abbreviation),
                    nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(0,20000)
 
@@ -436,7 +436,8 @@ p3<- data %>%
   ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Percent of Population 14-24")+
-  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+  geom_label_repel(data = filter(data, as.integer(state) > 12 &
+                                   as.integer(state) <= 24  & year == 1984),
                    aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(10,25)
 
@@ -445,7 +446,8 @@ p4<- data %>%
   ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Percent of Population 14-24")+
-  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &
+                                   as.integer(state) <= 36 & year == 1984),
                    aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(10,25)
 
@@ -454,7 +456,8 @@ p5<- data %>%
   ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
   geom_line(aes(color = Abbreviation)) +
   labs(x = "Year",  y = "Percent of Population 14-24") +
-  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
+  geom_label_repel(data = filter(data, as.integer(state) > 36 &
+                                   year == 1984),aes(label = Abbreviation),
                    nudge_x = .75,na.rm = TRUE) +
   theme(legend.position = "none") + ylim(10,25)
 
@@ -473,42 +476,48 @@ in **Figure 6**.
 ```{r,warning=FALSE, echo=FALSE, fig.height=6, fig.width=16, fig.cap="Box Plot of States - Sorted by Total Fatality Rate"}
 b1 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = total_fatalities_rate)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = total_fatalities_rate)) +
   geom_boxplot() +
   labs(x = "States",  y = "Fatality rate") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 b2 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = `pct_population_14_to_24`)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = `pct_population_14_to_24`)) +
   geom_boxplot() +
   labs(x = "States",  y = "Percent pop 14-24") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 b3 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = minimum_drinking_age)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = minimum_drinking_age)) +
   geom_boxplot() +
   labs(x = "States",  y = "Min Drinking Age") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 b4 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = unemployment_rate)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = unemployment_rate)) +
   geom_boxplot() +
   labs(x = "States",  y = "Unemployment Rate") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 b5 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = blood_alc)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = blood_alc)) +
   geom_boxplot() +
   labs(x = "States",  y = "Avg. Blood Alcohol Content") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 b6 <- data %>%
   group_by(Abbreviation) %>%
-  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), y = vehicle_miles_per_capita)) +
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = vehicle_miles_per_capita)) +
   geom_boxplot() +
   labs(x = "States",  y = "Vehicle Miles per Capita") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
@@ -527,25 +536,61 @@ we've identified in the EDA as important to build the causal models.
 
 # Preliminary Model
 
-
 ### Linear Model 
 
-```{r preliminary model, message=FALSE, warning=FALSE}
+> A linear model is a sensible starting place because we have non-independence in 
+this data set. This dataset also contains some variability, since we have repeated 
+measures taken over time, (i.e, finding the fatality rate of each state every year). 
+A linear model can help us determine the relationships between different variables 
+and the outcome and allow us to better understand the source of variability within 
+the dataset.
 
+```{r preliminary model, message=FALSE, warning=FALSE, results='asis'}
+lsdv_mod <- plm(total_fatalities_rate ~  minimum_drinking_age + state, 
+                index=c("state", "year"), model = "within", data=data)
+
+stargazer(lsdv_mod, type = "latex", header=FALSE,
+          omit.stat = c("ser","f","adj.rsq"), dep.var.labels = "",
+          column.labels = c("Within"), title="Preliminary Model")
 ```
 
 ### Discussion on Linear Model
 
+> We incorporate dummy variables for the year and for all states. The model doesn't 
+include any other variable, so omitted variable bias could be present, however, the 
+results imply that minimum drinking age does have an impact on the total fatality 
+rate within states.
 
 # Expanded Model 
 
 
 ### Modeling
 
-```{r expanded model, message=FALSE, warning=FALSE}
+```{r expanded model, message=FALSE, warning=FALSE, results='asis'}
+# create speed limit over 70 variable
+data <- data %>% 
+  mutate(speed_lim_70 = ifelse(speed_limit == 55 | speed_limit == 65, 0, 1))
+
+
+exp_mod <- plm(
+  log(total_fatalities_rate) ~ minimum_drinking_age + state + blood_alc + 
+    per_se_laws + primary_seatbelt_law + secondary_seatbelt_law + speed_lim_70 + 
+    graduated_drivers_license_law + log(pct_population_14_to_24) + 
+    log(unemployment_rate) + log(vehicle_miles_per_capita),
+  index=c("state", "year"), 
+  model = "within", 
+  data=data
+)
+
+stargazer(exp_mod, type = "latex", header=FALSE,
+          omit.stat = c("ser","f","adj.rsq"), dep.var.labels = "",
+          column.labels = c("Within"), title="Expanded Model")
 
 ```
 
+> Based on the expanded model, the vehicle miles driven per capita, unemployment rate, 
+percent of population between 14 and 24, as well as per se laws and each year of 
+observation were statistically significant.  
 
 # State-Level Fixed Effects 
 
@@ -665,34 +710,251 @@ phtest(within.model, random.model)
 
 ### Blood Alcohol Affects
 
-> The fixed effect model estimates that blood alcohol has a coefficient of -6.163. In action, this means that for a unit increase in blood alcohol limit, the fatality rate will decrease by approximately 6 fatalities per 100,000 people. However in our case, blood alcohol is measured in hundreths and tenths rather than in unitary increments, so a full unit increase isn't likely to take place. In the Pooled model, the coefficient for blood alcohol is -8.736, which is the largest impact out of the five models. The coefficient for the First Difference model is -3.092, the smallest impact of the models. The between model has a similar coefficient of -3.313, and lastly the Random Effects model has a coefficient of -6.610, very simlilar to the Fixed Effect Model. All of these coefficients are significant.
+> The fixed effect model estimates that blood alcohol has a coefficient of -6.163. 
+In action, this means that for a unit increase in blood alcohol limit, the fatality 
+rate will decrease by approximately 6 fatalities per 100,000 people. However in our 
+case, blood alcohol is measured in hundreths and tenths rather than in unitary increments, 
+so a full unit increase isn't likely to take place. In the Pooled model, the coefficient 
+for blood alcohol is -8.736, which is the largest impact out of the five models. 
+The coefficient for the First Difference model is -3.092, the smallest impact of 
+the models. The between model has a similar coefficient of -3.313, and lastly the 
+Random Effects model has a coefficient of -6.610, very simlilar to the Fixed Effect 
+Model. All of these coefficients are significant.
 
 ### Per se Laws
 
-> The Fixed Effect model estimates that the coefficient for the per-se parameter is -1.219. In our data, the per se parameter is a one-hot-encoded variable with some values being between zero and one, in cases where states took on the law mid-year. In the case where a state does have per se laws in a given year, our model estimates that the rate of fatalities will decrease by 1.2 per 100,000 people. The is the largest impact of the five models, with the coefficients of the Pooled Effect, First Difference, Between, and Random Effect being -0.881, -0.669, -0.467, and -1.178 respectively. All of these coefficients are significant.
+> The Fixed Effect model estimates that the coefficient for the per-se parameter 
+is -1.219. In our data, the per se parameter is a one-hot-encoded variable with 
+some values being between zero and one, in cases where states took on the law mid-year. 
+In the case where a state does have per se laws in a given year, our model estimates 
+that the rate of fatalities will decrease by 1.2 per 100,000 people. The is the 
+largest impact of the five models, with the coefficients of the Pooled Effect, First 
+Difference, Between, and Random Effect being -0.881, -0.669, -0.467, and -1.178 
+respectively. All of these coefficients are significant.
 
 ### Primary Seat Belt Laws
 
-> The primary seat belt law variable is also a Boolean, indicating whether a state uses primary seat belt laws or secondary. For the Pooled model, the coefficient is not significant and is -0.322, a fairly small impact. Similarly, the coefficient for the First Difference model is -0.201, and the coefficient for the Between model is -0.491. This variable is not significant in either model. However, the coefficients for both the Fixed Effect and Random Effect models are both significant, being -0.867 and -0.833 respectively. 
+> The primary seat belt law variable is also a Boolean, indicating whether a state 
+uses primary seat belt laws or secondary. For the Pooled model, the coefficient is 
+not significant and is -0.322, a fairly small impact. Similarly, the coefficient for 
+the First Difference model is -0.201, and the coefficient for the Between model is -0.491. 
+This variable is not significant in either model. However, the coefficients for both 
+the Fixed Effect and Random Effect models are both significant, being -0.867 and -0.833 
+respectively. 
 
 ### Reliability of Estimates
 
-> The Wooldridge first-difference test for serial correlation in panels returns significant p values for both the Fixed Effect (within) and First Difference models, however the p value for the Fixed Effect model is far more significant. This leads us to believe that the Fixed Effect model is more reliable than the First Difference and Pooled models. Moving on, the outcome of the Hausmen test is not significant, meaning we do not reject the null hypothesis that random effects are appropriate, suggesting that we should not use the Fixed Effect model. Because of these outcomes, the estimates created by the Random Effects model will be the most reliable.
+> The Wooldridge first-difference test for serial correlation in panels returns 
+significant p values for both the Fixed Effect (within) and First Difference models, 
+however the p value for the Fixed Effect model is far more significant. This leads 
+us to believe that the Fixed Effect model is more reliable than the First Difference
+and Pooled models. Moving on, the outcome of the Hausmen test is not significant, 
+meaning we do not reject the null hypothesis that random effects are appropriate, 
+suggesting that we should not use the Fixed Effect model. Because of these outcomes, 
+the estimates created by the Random Effects model will be the most reliable.
 
 ### Model Assumptions 
 
 ### Are the assumptions reasonable?
 
 
-# (10 points) Consider a Random Effects Model 
 
-Instead of estimating a fixed effects model, should you have estimated a random effects model?
+# Consider a Random Effects Model 
 
-- Please state the assumptions of a random effects model, and evaluate whether these assumptions are met in the data. 
-- If the assumptions are, in fact, met in the data, then estimate a random effects model and interpret the coefficients of this model. Comment on how, if at all, the estimates from this model have changed compared to the fixed effects model. 
-- If the assumptions are **not** met, then do not estimate the data. But, also comment on what the consequences would be if you were to *inappropriately* estimate a random effects model. Would your coefficient estimates be biased or not? Would your standard error estimates be biased or not? Or, would there be some other problem that might arise?
+Instead of estimating a fixed effects model, should you have estimated a random 
+effects model?
 
-# (10 points) Model Forecasts 
+```{r random-effect-model estimate, warning=FALSE, message=FALSE, results='asis'}
+
+data <- data %>%
+  mutate(speed_limit = ifelse(sl55 >= 0.5, 55,
+                       ifelse(sl65 >= 0.5, 65,
+                       ifelse(sl70 >= 0.5, 70,
+                       ifelse(sl75 >= 0.5, 75,
+                       ifelse(slnone >= 0.5, 'none', 0)
+                       ))))) 
+
+data = data %>% mutate(
+    seatbelt = factor(seatbelt), # 'seatbelt' categorizes primary or secondary
+    speed_limit_70plus = ifelse(speed_limit == 55 | speed_limit == 65, 0, 1)
+  )
+
+data <- data %>% mutate(blood_alcohol_limit_10 = ifelse(bac10 >= 0.5, 1, 0),
+                        blood_alcohol_limit_08 = ifelse(bac08 >= 0.5, 1, 0)
+                       ) %>% 
+                mutate(bac = ifelse(blood_alcohol_limit_10==1, '10', 
+                             ifelse(blood_alcohol_limit_08==1, '8', 'none')))
+
+random.effect.model <- plm(log(total_fatalities_rate) ~ 
+                            year_of_observation + 
+                            factor(bac) +
+                            per_se_laws + 
+                            primary_seatbelt_law + 
+                            secondary_seatbelt_law + 
+                            speed_limit_70plus + 
+                            graduated_drivers_license_law + 
+                            pct_population_14_to_24 +
+                            unemployment_rate +
+                            vehicle_miles_per_capita,
+                            #log(pct_population_14_to_24) + 
+                            #log(unemployment_rate) + 
+                            #log(vehicle_miles_per_capita), 
+                           data = data,
+                           index = c("state", "year"),
+                           model = "random")
+
+stargazer(random.effect.model, type='latex', header=FALSE,
+          omit.stat = c("ser","f","adj.rsq"), 
+          dep.var.labels = "", title='Random Effects Model')
+
+```
+
+```{r cftest, message=FALSE, warning=FALSE}
+coeftest(random.effect.model, vcov. = vcovHC, type = "HC1")
+```
+
+
+### Assumptions of Random Effects
+
+> The first assumption of the random effect model is that there are no perfect 
+linear relationships among the explanatory variables. 
+
+```{r vif for RE model, message=FALSE, warning=FALSE}
+library(car)
+car::vif(random.effect.model)
+```
+**We see high values for percent_pop_aged_14_to_24, vehicle_miles_per_capita 
+indicating the possible presence of multicollinearity in these variables.**
+
+> The second assumption is that there is no correlation between the unobserved 
+random and fixed effects and the explanatory variables. Using a random effects 
+model imposes the error structure that the error term** $v_{it}$ **is 
+equal to the sum of variation between groups and variation within groups onto the 
+model residuals, allowing to properly specify the residuals and more efficiently 
+estimate the coefficients of interest. This requires the assumption of independence 
+between random effects and the other predictors in the model. The assumptions for 
+the fixed effect model are discussed above, the additional assumption of independence 
+of random effects and other predictors in the model is evaluated below. The test 
+we run is the Hausman Test for fixed versus random effects. The null hypothesis 
+is that the random effects model is acceptable while the alternative hypothesis 
+is that there is correlation between residuals and predictors, meaning that we 
+should use the FE model.**
+
+We conduct a Hausman test for random vs. fixed effects using `phtest`. We perform 
+this test with an $\alpha = 0.05$
+
+```{r, model comparison between within and random efect moidels, message=FALSE, warning=FALSE}
+res <- phtest(within.model, random.effect.model)
+```
+With a p-value of `r res$p.value` less than $\alpha$, we reject the null 
+hypothesis that random effects are appropriate, suggesting that we should use the 
+fixed models. The random effects model is not likely to be consistent in this case.
+
+>The third assumption is that of homoskedastic errors, which we can test below 
+using the Breusch-Pagan Lagrange Multiplier for random effects. Null is no 
+panel effect: 
+
+```{r pcdtest for Random Effect Model}
+plmtest(random.effect.model)
+```
+
+> Here we failed to reject the null and conclude that random effects is 
+not appropriate.
+
+### Note on Assumptions
+
+> As we have seen that the assumptions for random effect model are not met. If 
+we were to inappropriately estimate a random effect model, we would be incorrectly 
+assuming that the random effects and other predictors are independent of one another. 
+This would lead to omitted variable bias as the correlation between the random 
+effects and the explanatory variables of interest would not allow for accurate 
+estimation of the coefficient. Standard errors will also be biased as we are 
+assuming that the random effects, which are included in the error term, are 
+incorrectly uncorrelated with the predictors - given that there is correlation, 
+this will introduce bias into the standard errors.
+
+# Model Forecasts 
+
+### Data on Vehicle Miles Traveled
+
+> We have downloaded population data from https://fred.stlouisfed.org/series/POPTHM
+and vehicle driven data from https://fred.stlouisfed.org/series/TRFVOLUSM227NFWA.
+Population includes resident population plus armed forces overseas. The monthly 
+estimate is the average of estimates for the first of the month and the first of 
+the following month. Vehicle Miles Traveled and the 12-Month Moving Vehicle Miles 
+Traveled series are created by appending the recent monthly figures from the 
+FHWA’s Traffic Volume Trends to their Historic Monthly Vehicle Miles Traveled 
+(VMT) data file. We have defined the pandemic period between March 2020 through 
+March 2021 when the Covid vaccine became widely available.
+
+```{r download external data, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap="Vehicle Miles Traveled Series from the St. Louis Fed"}
+library(fredr)
+
+fredr_set_key("cd565a10e83d56f9f1150d5a2c067e2a")
+
+data.vhcl <- fredr(
+                   series_id = "TRFVOLUSM227NFWA",
+                   observation_start = as.Date("2018-01-01"),
+                   observation_end = as.Date("2023-08-01")
+                  ) %>% dplyr::select(date,value) %>% as_tsibble(index = date)
+data.pop <- fredr(
+                  series_id = "POPTHM",
+                  observation_start = as.Date("2018-01-01"),
+                  observation_end = as.Date("2023-08-01")
+                 )%>% dplyr::select(date, value) %>% as_tsibble(index = date)
+
+# Merge vehicle miles driven and population data
+data.temp <- merge(x = data.vhcl, y = data.pop, by = "date")
+
+# Calculate vehicle miles per capita
+data.temp <- data.temp %>% 
+  mutate(vehicle_miles_per_capita = 1000 * value.x / value.y)
+
+data.vhcl.ml.per.capita <- data.temp[, c('date', 'vehicle_miles_per_capita')]
+data.vhcl.ml.per.capita$year = year(data.vhcl.ml.per.capita$date)
+data.vhcl.ml.per.capita$month = month(data.vhcl.ml.per.capita$date)
+
+data.vhcl.ml.per.capita <- data.vhcl.ml.per.capita %>%
+  mutate(group = ifelse(year < 2020, "pre-pandemic",
+               ifelse(year == 2020 | year == 2021, "pandemic", 
+                      "post-pandemic")))
+
+
+data.pre.pandemic <- data.vhcl.ml.per.capita %>% 
+  filter(year == 2018)
+data.pandemic <- data.vhcl.ml.per.capita %>% 
+  filter(year == 2020 | year == 2021)
+data.pandemic.arranged <- data.pandemic %>% 
+  arrange(month)
+
+vehicle_miles_per_capita.diff <- 
+  data.pre.pandemic$vehicle_miles_per_capita - 
+  data.pandemic.arranged$vehicle_miles_per_capita
+
+drive_pandemic <- data.pandemic %>% slice(3:15)
+data.pandemic$group <- 'pandemic'
+data.pre.pandemic$group <- 'pre_pandemic'
+data.pandemic.pre.post.comparison <- rbind(data.pre.pandemic, data.pandemic)
+
+plot.orig <- data.vhcl.ml.per.capita %>% 
+  ggplot(aes(x = date, y = vehicle_miles_per_capita, color=group)) + 
+  geom_line() + xlab("Date") + ylab("Veh. Miles per Capita") +
+  ggtitle('Miles Driven during Pandemic')
+
+plot.comparison <- ggplot(
+  data.pandemic.pre.post.comparison, 
+         aes(x = month, 
+             y = vehicle_miles_per_capita, 
+             group = group)) + 
+  geom_point(aes(color=group)) + 
+  geom_smooth(aes(color=group)) + 
+  xlab('Month') +
+  ylab('Miles Driven') + 
+  ggtitle('Pre/Post Pandemic Miles Driven')
+
+(plot.orig | plot.comparison)
+```
+
 
 The COVID-19 pandemic dramatically changed patterns of driving. Find data (and include this data in your analysis, here) that includes some measure of vehicle miles driven in the US. Your data should at least cover the period from January 2018 to as current as possible. With this data, produce the following statements: 
 
@@ -703,8 +965,7 @@ The COVID-19 pandemic dramatically changed patterns of driving. Find data (and i
 Now, use these changes in driving to make forecasts from your models. 
 
 - Suppose that the number of miles driven per capita, increased by as much as the COVID boom. Using the FE estimates, what would the consequences be on the number of traffic fatalities? Please interpret the estimate.
-- Suppose that the number of miles driven per capita, decreased by as much as the COVID bust. Using the FE estimates, what would the consequences be on the number of traffic fatalities? Please interpret the estimate.
 
-# (5 points) Evaluate Error 
+# Evaluate Error 
 
 If there were serial correlation or heteroskedasticity in the idiosyncratic errors of the model, what would be the consequences on the estimators and their standard errors? Is there any serial correlation or heteroskedasticity? 
