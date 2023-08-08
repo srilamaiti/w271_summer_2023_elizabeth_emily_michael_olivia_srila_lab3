@@ -554,12 +554,37 @@ on per se laws change, if at all?
 - What do you estimate for coefficients on primary seat-belt laws? How do the 
 coefficients on primary seatbelt laws change, if at all? 
 
-The primary seat belt law variable is also a Boolean, indicating whether a state uses primary seat belt laws or secondary. For the Pooled model, the coefficient is not significant and is -0.322, a fairly small impact. Similarly, the coefficient for the First Difference model is -0.201, and the coefficient for the Between model is -0.491. This variable is not significant in either model. However, the coefficients for both the Fixed Effect and Random Effect models are both significant, being -0.867 and -0.833 respectively. 
+> The primary seat belt law variable is also a Boolean, indicating whether a state uses primary seat belt laws or secondary. For the Pooled model, the coefficient is not significant and is -0.322, a fairly small impact. Similarly, the coefficient for the First Difference model is -0.201, and the coefficient for the Between model is -0.491. This variable is not significant in either model. However, the coefficients for both the Fixed Effect and Random Effect models are both significant, being -0.867 and -0.833 respectively. 
 
 Which set of estimates do you think is more reliable? Why do you think this? 
 
-The Wooldridge first-difference test for serial correlation in panels returns significant p values for both the Fixed Effect (within) and First Difference models, however the p value for the Fixed Effect model is far more significant. This leads us to believe that the Fixed Effect model is more reliable than the First Difference and Pooled models. Moving on, the outcome of the Hausmen test is not significant, meaning we do not reject the null hypothesis that random effects are appropriate, suggesting that we should not use the Fixed Effect model. Because of these outcomes, the estimates created by the Random Effects model will be the most reliable.
+> The Wooldridge first-difference test for serial correlation in panels returns significant p values for both the Fixed Effect (within) and First Difference models, however the p value for the Fixed Effect model is far more significant. This leads us to believe that the Fixed Effect model is more reliable than the First Difference and Pooled models. Moving on, the outcome of the Hausmen test is not significant, meaning we do not reject the null hypothesis that random effects are appropriate, suggesting that we should not use the Fixed Effect model. Because of these outcomes, the estimates created by the Random Effects model will be the most reliable.
 
-- What assumptions are needed in each of these models? 
+- What assumptions are needed in each of these models?  
 
+* For each 'i' the model is 
+$y_{it} = \beta_1 x_{it1} + ... + \beta_k x_{itk} + a_i + u_{it}, t =1 ..T$.
+* We have a random sample from the cross section.
+* Each explanatory variable changes over time (for at least some time) and no 
+perfect linear relationship exists between explanatory variables.
+* For each t, the expected value of the idiosyncratic error given the explanatory
+variables in all time periods and the unobserved effect is zero: $E(u_{it}|X_i, a_i)=0$.
+* The variance of the difference errors, conditional on all explanatory variables, is constant $Var(\triangle u_{it} | X_i) = \sigma^2_u, t=2,....,T$. This is required for homoskedastic errors.
+* For all $t \neq s$, the differences in the idiosyncratic errors are 
+uncorrelated (conditional on all explanatory variables). This is for serially 
+uncorrelated residuals.
+ 
 - Are these assumptions reasonable in the current context?
+
+> The assumption in an pooled OLS model is that the data is IID. Here in the 
+data set, a sample of a large population is collected on different years. It is 
+unlikely that a particular individual sample data point is measured twice. In 
+such a circumstance a pooled OLS model would be applicable. 
+> However, in this data set, data granularity is at the state level and the same 
+state is measured multiple times across years. This violates the assumption of 
+IID in the pooled OLS. 
+> A fixed effect model is then expected to be a better model in this scenario. 
+We perform a F-test between the pooled and the fixed effect model to check for 
+fixed effects. The null hypothesis is that there are no fixed effects and the 
+alternate hypothesis is that there are fixed effects. We test against an alpha 
+of 0.05.
