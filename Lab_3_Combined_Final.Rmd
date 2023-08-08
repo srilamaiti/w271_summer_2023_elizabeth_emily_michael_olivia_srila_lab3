@@ -534,6 +534,7 @@ across the years surveyed. The population aged 14-24 is also presented in this
 fashion but no major observations can be determined. We will the variables that
 we've identified in the EDA as important to build the causal models.
 
+\newpage
 # Preliminary Model
 
 ### Linear Model 
@@ -561,8 +562,8 @@ include any other variable, so omitted variable bias could be present, however, 
 results imply that minimum drinking age does have an impact on the total fatality 
 rate within states.
 
+\newpage
 # Expanded Model 
-
 
 ### Modeling
 
@@ -592,6 +593,7 @@ stargazer(exp_mod, type = "latex", header=FALSE,
 percent of population between 14 and 24, as well as per se laws and each year of 
 observation were statistically significant.  
 
+\newpage
 # State-Level Fixed Effects 
 
 ### Modeling
@@ -757,9 +759,8 @@ the estimates created by the Random Effects model will be the most reliable.
 
 ### Are the assumptions reasonable?
 
-
-
-# Consider a Random Effects Model 
+\newpage
+# Random Effects Model 
 
 Instead of estimating a fixed effects model, should you have estimated a random 
 effects model?
@@ -813,7 +814,6 @@ stargazer(random.effect.model, type='latex', header=FALSE,
 coeftest(random.effect.model, vcov. = vcovHC, type = "HC1")
 ```
 
-
 ### Assumptions of Random Effects
 
 > The first assumption of the random effect model is that there are no perfect 
@@ -845,6 +845,7 @@ this test with an $\alpha = 0.05$
 
 ```{r, model comparison between within and random efect moidels, message=FALSE, warning=FALSE}
 res <- phtest(within.model, random.effect.model)
+# res
 ```
 With a p-value of `r res$p.value` less than $\alpha$, we reject the null 
 hypothesis that random effects are appropriate, suggesting that we should use the 
@@ -873,6 +874,7 @@ assuming that the random effects, which are included in the error term, are
 incorrectly uncorrelated with the predictors - given that there is correlation, 
 this will introduce bias into the standard errors.
 
+\newpage
 # Model Forecasts 
 
 ### Data on Vehicle Miles Traveled
@@ -887,7 +889,7 @@ FHWA’s Traffic Volume Trends to their Historic Monthly Vehicle Miles Traveled
 (VMT) data file. We have defined the pandemic period between March 2020 through 
 March 2021 when the Covid vaccine became widely available.
 
-```{r download external data, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap="Vehicle Miles Traveled Series from the St. Louis Fed"}
+```{r, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap="Vehicle Miles Traveled Series from the St. Louis Fed"}
 library(fredr)
 
 fredr_set_key("cd565a10e83d56f9f1150d5a2c067e2a")
@@ -952,20 +954,45 @@ plot.comparison <- ggplot(
   ylab('Miles Driven') + 
   ggtitle('Pre/Post Pandemic Miles Driven')
 
-(plot.orig | plot.comparison)
+(plot.orig / plot.comparison)
 ```
 
+### Forecasting changes in driving
 
-The COVID-19 pandemic dramatically changed patterns of driving. Find data (and include this data in your analysis, here) that includes some measure of vehicle miles driven in the US. Your data should at least cover the period from January 2018 to as current as possible. With this data, produce the following statements: 
+```{r assess decrease, message=FALSE, warning=FALSE}
 
-- Comparing monthly miles driven in 2018 to the same months during the pandemic: 
-  - What month demonstrated the largest decrease in driving? How much, in percentage terms, lower was this driving? 
-  - What month demonstrated the largest increase in driving? How much, in percentage terms, higher was this driving? 
+max_prepandemic <- max(data.pre.pandemic$vehicle_miles_per_capita)
+min_pandemic <- min(data.pandemic$vehicle_miles_per_capita)
+
+```
+
+> The pandemic caused a rapid decrease in the vehicle miles traveled per capita.
+To forecast the impact of this decrease, we assessed the pre-pandemic peak to the
+pandemic lull - which was a decrease of around `r round(max_prepandemic-min_pandemic,1)`
+miles per capita.
   
-Now, use these changes in driving to make forecasts from your models. 
 
-- Suppose that the number of miles driven per capita, increased by as much as the COVID boom. Using the FE estimates, what would the consequences be on the number of traffic fatalities? Please interpret the estimate.
 
+\newpage
 # Evaluate Error 
 
-If there were serial correlation or heteroskedasticity in the idiosyncratic errors of the model, what would be the consequences on the estimators and their standard errors? Is there any serial correlation or heteroskedasticity? 
+### Consequences of Serial Correlation / Heteroskadicity
+
+> According to literature, the consequences of serial correlation and heteroskedacity 
+in panel data models is a loss in efficiency of the estimates (Jianhong). This means
+that the true coefficients relative to the estimated coefficients likely
+have higher variance than what is currently estimated in the standard errors.
+
+### Are there serial correlations or heteroskedasticity
+
+> Yes, while testing the random effects model, we conducted the Lagrange Multiplier
+test and rejected the null hypothesis. We also a Hausman test and rejected the null
+hypothesis. By rejecting the null hypothesis in both cases, we can conclude that
+there exists both serial correlation and heteroskedasticity.
+
+\newpage
+# References
+
+(1) Jianhong Wu, A joint test for serial correlation and heteroscedasticity in fixed-T panel regression 
+models with interactive effects, Economics Letters, Volume 197, 2020, 109594, ISSN 0165-1765, 
+https://doi.org/10.1016/j.econlet.2020.109594. (https://www.sciencedirect.com/science/article/pii/S0165176520303578)
