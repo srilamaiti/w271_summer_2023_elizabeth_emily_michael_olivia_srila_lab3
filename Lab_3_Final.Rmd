@@ -1,0 +1,1078 @@
+---
+title: 'Lab 3: Panel Models'
+subtitle: 'US Traffic Fatalities: 1980 - 2004'
+output: 
+  bookdown::pdf_document2: default
+---
+
+```{r load packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(GGally)
+library(tibble)
+library(lme4)
+library(gridExtra)
+library(reshape2)
+library(mgcv)
+library(plm)
+library(lmtest)
+library(aTSA)
+library(urca)
+library(tsibble)
+library(dplyr)
+library(fabletools)
+library(tidyverse)
+library(magrittr)
+library(patchwork)
+library(scales)
+library(plyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(forecast)
+library(sandwich)
+library(tseries)
+library(vars)
+library(jsonlite)
+library(fable)
+library(gtrendsR) 
+library(zoo)
+library(feasts)
+library(thematic)
+library(ggfortify)
+library(fpp3)
+require(knitr)
+library(stargazer)
+library(ggrepel)
+knitr::opts_chunk$set(tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(comment = " ")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+# U.S. traffic fatalities: 1980-2004
+
+We are answering the following **causal** question: 
+
+> **"Do changes in traffic laws affect traffic fatalities?"**  
+
+```{r load data, echo = FALSE, include=FALSE}
+library(data.table)
+
+load(file="~/271/w271_summer_2023_elizabeth_emily_michael_olivia_srila_lab3/data/driving.RData", verbose = TRUE)
+
+## please comment these calls in your work 
+#head(data)
+#desc
+```
+
+
+```{r, adding state abbriviation, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+# Adding state abbriviation
+
+# sorting stat.abb from R isn't correct because it puts Alaska and Alabama 
+# out of order
+
+states.list <- c("AL","AK","AZ","AR","CA","CO","CT","DC","DE","FL","GA","HI",
+                 "ID",
+                 "IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS",
+                 "MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK",
+                 "OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV",
+                 "WI","WY")
+
+states <- data.frame("index"=1:51,"abbr"=states.list)
+data <- merge(data, states, by.x = "state", by.y = "index")
+```
+
+
+```{r, adding year of observation, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+# year_of_observation
+data <- data %>%
+  mutate(year_of_observation = factor(year))
+```
+
+
+# Build and Describe the Data 
+
+### Load the data and produce useful features.
+
+> We produced. a new variable, called `speed_limit` that re-encodes the data 
+that is in `sl55`, `sl65`, `sl70`, `sl75`, and `slnone`.
+    
+```{r recode speed limit columns, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}    
+data <- data %>%
+  mutate(speed_limit =
+           case_when(
+             data$sl55 > .5 ~ 55,
+             data$sl65 > .5 ~ 65,
+             data$sl70 > .5 ~ 70,
+             data$sl75 > .5 ~ 75,
+             data$slnone > .5 ~ 0,
+             data$year == 1996 & data$state == 6 ~ 75,
+             data$year == 1996 & data$state == 11 ~ 70,
+             data$year == 1995 & data$state == 21 ~ 65,
+             data$year == 1997 & data$state == 24 ~ 70,
+             data$year == 1988 & data$state == 47 ~ 65
+           ))
+
+```
+
+> We produced a new variable, called `year_of_observation` that re-encodes the 
+data that is in `d80`, `d81`, ... , `d04`. 
+    
+```{r recode year, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}    
+data <- data %>% 
+  mutate(year_of_observation =
+           case_when(
+             data$d80 == 1 ~ 1980,
+             data$d81 == 1 ~ 1981,
+             data$d82 == 1 ~ 1982,
+             data$d83 == 1 ~ 1983,
+             data$d84 == 1 ~ 1984,
+             data$d85 == 1 ~ 1985,
+             data$d86 == 1 ~ 1986,
+             data$d87 == 1 ~ 1987,
+             data$d88 == 1 ~ 1988,
+             data$d89 == 1 ~ 1989,
+             data$d90 == 1 ~ 1990,
+             data$d91 == 1 ~ 1991,
+             data$d92 == 1 ~ 1992,
+             data$d93 == 1 ~ 1993,
+             data$d94 == 1 ~ 1994,
+             data$d95 == 1 ~ 1995,
+             data$d96 == 1 ~ 1996,
+             data$d97 == 1 ~ 1997,
+             data$d98 == 1 ~ 1998,
+             data$d99 == 1 ~ 1999,
+             data$d00 == 1 ~ 2000,
+             data$d01 == 1 ~ 2001,
+             data$d02 == 1 ~ 2002,
+             data$d03 == 1 ~ 2003,
+             data$d04 == 1 ~ 2004,
+             TRUE ~ 00000
+           )
+)
+# data %>% filter(year_of_observation == 00000)   
+```    
+    
+> We produced a new variable for each of the other variables that are one-hot 
+encoded (i.e. `bac*` variable series). 
+
+```{r recode other one-hot vars, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+data <- data %>%
+  mutate(
+    blood_alc =
+      case_when(
+        bac10 > .5 ~ .1,
+        bac08 > .5 ~ .08,
+        bac08 == 0 & bac10 == 0 ~ 0,
+        bac10 > bac08 ~ .1,
+        TRUE ~ .08
+      )
+  )
+
+```
+
+> We renamed the variables to more legible names.
+
+```{r, renaming to meaningful columns, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+# rename the variables to sensible names
+data <- data %>%
+  dplyr::rename(
+    "total_fatalities_rate"                      = "totfatrte",
+    "minimum_drinking_age"                       = "minage",
+    "zero_tolerance_law"                         = "zerotol",
+    "state_population"                           = "statepop",
+    "graduated_drivers_license_law"              = "gdl",
+    "per_se_laws"                                = "perse",
+    "total_traffic_fatalities"                   = "totfat",
+    "total_nighttime_fatalities"                 = "nghtfat",
+    "total_weekend_fatalities"                   = "wkndfat",
+    "total_fatalities_per_100_million_miles"     = "totfatpvm",
+    "nighttime_fatalities_per_100_million_miles" = "nghtfatpvm",
+    "weekend_fatalities_per_100_million_miles"   = "wkndfatpvm",
+    "nighttime_fatalities_rate"                  = "nghtfatrte",
+    "weekend_fatalities_rate"                    = "wkndfatrte",
+    "vehicle_miles"                              = "vehicmiles",
+    "unemployment_rate"                          = "unem",
+    "pct_population_14_to_24"                    = "perc14_24",
+    "vehicle_miles_per_capita"                   = "vehicmilespc",
+    "primary_seatbelt_law"                       = "sbprim",
+    "secondary_seatbelt_law"                     = "sbsecon",
+    "Abbreviation"                               = "abbr"
+  ) 
+
+# Check data
+#data %>% glimpse()
+```
+
+
+### Description of the basic structure of the dataset. 
+    
+> The long-panel data being reviewed here has `r ncol(data)` columns and `r nrow(data)` 
+row, where each row is returning metrics having to do with traffic incidents in 
+each state (excluding Alaska and Hawaii) from the years 1980 through 2004, at an 
+annual granularity. Specifically, we will be focusing on traffic fatalities in 
+each state to see if regulations like blood alcohol limits, speed limits, and so 
+on appear to impact the rate of fatalities per state. This dataset also includes 
+columns that show how many of these fatalities happened while driving at night or 
+on the weekend. The data was compiled by Donald G Freedman for the paper "Drunk 
+living legislation and traffic fatalities:New evidence on BAC 08 laws" - Contemporary 
+Economic Policy 2007. In the paper it is noted that "Fatality data are from the 
+Fatality Analysis Reporting System (FARS) compiled by NHTSA. Data on traffic legislation 
+for the years 1982—1999 were provided by Thomas Dee. Earlier data on legislation 
+were taken from Zador et al. (1989) and later data on legislation from the National 
+Center for Statistics and Analysis at the NHTSA Web site at http://www-nrd.nhtsa.dot.gov/departments/nrd-30/ncsa/. 
+Data on graduated drivers’ licenses are taken from Dee, Grabowski, and Morrisey 
+(2005). State unemployment rates are from Dee and the Bureau of Labor Statistics; 
+age data are from the Bureau of the Census". **The outcome of interest, 
+`total_fatalities_rate` is defined as the number of fatalities per 100,000 people.**
+    
+    
+### EDA
+
+> A thorough EDA is conducted on the dataset to explore the relationship of certain
+variables at the state and aggregate level. First, data validity checks were conducted 
+in order to determine that the observations across the states in the dataset were
+consistent and repeated across all years without large gaps (code is commented out
+to reduce output). This showed that the dataset did in fact have consistency and 
+all observations were accounted for. We also verified that state numbers 2 and 13, 
+which corresponded to Alaska and Hawaii, were indeed missing from the dataset.
+
+```{r table of observations, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+#data %>% 
+#  dplyr::select(year_of_observation, state) %>%
+#  table()
+```
+
+```{r ensure consecutive data, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+#data %>%
+#  is.pconsecutive()
+#
+#pdim(data)
+```
+
+> Next, we interrogated the total fatalities rate available in the data. A state
+by state view of each is shown in **Figure 1**. An initial observation can be made
+by studying this figure - states like Wyoming and New Mexico appear to stand out
+from others as having high fatality rates. States like Connecticut and Rhode Island
+appear to stand out as having low fatality rate. All states show a downward or 
+flat trend in fatality over time.
+
+```{r,warning=FALSE, message=FALSE, echo=FALSE, fig.height=9, fig.width=16, fig.cap="Fatality Rate by State (where data recorded) and Year Since 1980", echo=FALSE}
+data %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line() +
+  geom_smooth() +
+  facet_wrap(~ Abbreviation, nrow = 5, ncol=10) +
+  labs(x = "Year",  y = "Fatality rate") +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks=c(1980, 1990, 2000))
+
+```
+
+> The mean fatality rate is reported in **Figure 2**. It shows that, over time and
+across all the 48 contiguious states (plus DC), the fatality rate decreased between
+1980 and 2004. Notably, there was a substantial decrease between 1980 and approximately
+1993, with leveling off afterwards, from a high of >25 deaths per 100K to a low of 
+~17 per 100K.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=6, fig.width=12, fig.cap="Time Series of Average Fatality", echo=FALSE}
+
+mean_fat <- data %>%
+  dplyr::group_by(year) %>%
+  dplyr::summarise(mean = mean(total_fatalities_rate)) %>% mutate(year=lubridate::ymd(year, truncated=2L))
+
+mean_fat <- mean_fat %>% as_tsibble(index=year)
+
+mean_fat %>% autoplot(mean) + geom_smooth() +
+  xlab("Year") +
+  ylab("Mean Fatality Rate") +
+  ggtitle("Mean Fatality Rate from 1980 - 2004")
+
+```
+
+> An additional study across states was done to see how states performed on an equal 
+axis, which is shown in **Figure 3**. The major takeaway is a repeat of **Figure 1**, 
+which is that western states like Wyoming and New Mexico are states that appear to 
+have higher rates of fatality, while NE states Connecticut, Massachussets, and Rhode 
+Island appear to be states with lower fatality rates.
+
+
+```{r,warning=FALSE,echo=FALSE, fig.height=4, fig.width=12, fig.cap="Fatality Rate by State on Common Axis"}
+
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  ylim(0, 55) +
+  theme(legend.position = "none")
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 & as.integer(state) <= 24  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  ylim(0, 55) +
+  theme(legend.position = "none")
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &as.integer(state) <= 36 & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  ylim(0, 55) +
+  theme(legend.position = "none")
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = year, y = total_fatalities_rate)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Fatality rate") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 & year == 1984),aes(label = Abbreviation),
+                   nudge_x = .75,na.rm = TRUE) +
+  ylim(0, 55) +
+  theme(legend.position = "none")
+
+grid.arrange(p2,p3,p4, p5, nrow = 1, ncol = 4, top="Fatality Rate Across States")
+```
+
+> To explore the impact of other variables of interest at the aggregagate and state
+level, we first used a scatterplot matrix to find baseline correlations between 
+the variables when averaging across states. **Figure 4** shows the scatterplot matrix
+of the variables, averaged across the states and DC. The variables with strong correlation
+to the average fatality rate include vehicle miles driven per capita (-0.88), average
+population (-0.857), and average percentage of the population consisting of individuals
+aged 14-24 (0.909). Lessor variables included average unemployment and the average BAC.
+The population 14-24 is interesting because it's known that young adults tend to
+engage in riskier activties. 
+
+```{r, warning=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=12, fig.cap="Scatterplot Matrix of Variables of Interest", echo=FALSE}
+
+all_means <- data %>%
+  dplyr::group_by(year) %>%
+  dplyr::summarise(
+    avg_total_fatality_rate = mean(total_fatalities_rate), 
+    avg_drinking_age = mean(minimum_drinking_age),
+    avg_pop = mean(state_population), 
+    avg_unemployment = mean(unemployment_rate), 
+    avg_perc_pop = mean(`pct_population_14_to_24`),
+    avg_speed_limit = mean(speed_limit), 
+    avg_blood_alc_limit = mean(blood_alc),
+    avg_vmd_percap = mean(vehicle_miles_per_capita)
+  )
+
+all_means %>% ggpairs() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+```{r,warning=FALSE, message=FALSE,echo=FALSE, fig.height=4, fig.width=12, fig.cap="Vehicle Miles Driven Per Capita", echo=FALSE}
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Vehicle Miles Per Capita")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(0,20000)
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Vehicle Miles Per Capita")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 &
+                                   as.integer(state) <= 24  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(0,20000)
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Vehicle Miles Per Capita")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 & 
+                                   as.integer(state) <= 36 & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(0,20000)
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = year, y = vehicle_miles_per_capita)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Vehicle Miles Per Capita") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 &
+                                   year == 1984),aes(label = Abbreviation),
+                   nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(0,20000)
+
+grid.arrange(p2,p3,p4, p5, nrow = 1, ncol = 4)
+```
+
+```{r,warning=FALSE, message=FALSE,echo=FALSE, fig.height=4, fig.width=12, fig.cap="Percent of Population Aged 14-24", echo=FALSE}
+
+p2<- data %>%
+  filter(as.integer(state) <= 12 ) %>%
+  ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Percent of Population 14-24")+
+  geom_label_repel(data = filter(data, as.integer(state) <= 12  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(10,25)
+
+p3<- data %>%
+   filter(as.integer(state) > 12 & as.integer(state) <= 24 ) %>%
+  ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Percent of Population 14-24")+
+  geom_label_repel(data = filter(data, as.integer(state) > 12 &
+                                   as.integer(state) <= 24  & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(10,25)
+
+p4<- data %>%
+  filter(as.integer(state) > 24 &as.integer(state) <= 36 ) %>%
+  ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Percent of Population 14-24")+
+  geom_label_repel(data = filter(data, as.integer(state) > 24 &
+                                   as.integer(state) <= 36 & year == 1984),
+                   aes(label = Abbreviation), nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(10,25)
+
+p5<- data %>%
+  filter(as.integer(state) > 36 ) %>%
+  ggplot(aes(x = year, y = `pct_population_14_to_24`)) +
+  geom_line(aes(color = Abbreviation)) +
+  labs(x = "Year",  y = "Percent of Population 14-24") +
+  geom_label_repel(data = filter(data, as.integer(state) > 36 &
+                                   year == 1984),aes(label = Abbreviation),
+                   nudge_x = .75,na.rm = TRUE) +
+  theme(legend.position = "none") + ylim(10,25)
+
+grid.arrange(p2,p3,p4, p5, nrow = 1, ncol = 4)
+```
+
+> To see how each state compares to the other, **Figure 5** and **Figure 6** are
+displayed with shows the time series, for each state, of the vehicle miles driven
+per capita and the percent of the population aged 14-24. Interesting, again Wyoming
+stands out as a state where more vehicle miles are driven per capita than anywhere
+else. New York is an outlier in the oppostie direction. Wyoming does not appear
+to have a high number of adolescant adults, as a percentage of its population, shown
+in **Figure 6**.
+
+
+```{r,warning=FALSE, echo=FALSE, fig.height=4, fig.width=16, fig.cap="Box Plot of States - Sorted by Total Fatality Rate", echo=FALSE}
+b1 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = total_fatalities_rate)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Fatality rate") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b2 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = `pct_population_14_to_24`)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Percent pop 14-24") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b3 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = minimum_drinking_age)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Min Drinking Age") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b4 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = unemployment_rate)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Unemployment Rate") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b5 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = blood_alc)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Avg. Blood Alcohol Content") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b6 <- data %>%
+  group_by(Abbreviation) %>%
+  ggplot(aes(x = reorder(Abbreviation,total_fatalities_rate), 
+             y = vehicle_miles_per_capita)) +
+  geom_boxplot() +
+  labs(x = "States",  y = "Vehicle Miles per Capita") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+        
+grid.arrange(b1, b6, b3, b4, b2, b5, ncol=3, nrow=2)
+```
+
+> Finally, a boxplot of the distribution across all years is built for a subset
+of the variables. This is presented in **Figure 7**. As expected, the state with
+the highest average fatality rate is Wyoming, and the state with the smallest is 
+Rhode Island. When viewing the vehicle miles per capita, the relationship is striking -
+Wyoming is also the state with the highest average vehicle miles driven per capita
+across the years surveyed. The population aged 14-24 is also presented in this 
+fashion but no major observations can be determined. We will use the variables that
+we've identified in the EDA as important to build the causal models.
+
+
+# Preliminary Model
+
+### Linear Model 
+
+> A linear model is a sensible starting place because we have non-independence in 
+this data set. This dataset also contains some variability, since we have repeated 
+measures taken over time, (i.e, finding the fatality rate of each state every year). 
+A linear model can help us determine the relationships between different variables 
+and the outcome and allow us to better understand the source of variability within 
+the dataset.
+
+```{r preliminary model, message=FALSE, warning=FALSE, results='asis'}
+lsdv_mod <- plm(
+  log(total_fatalities_rate) ~ year,
+  index = c("year","state"), 
+  model = "pooling", 
+  data=data
+)
+
+#stargazer(lsdv_mod, type = "text", header=FALSE,
+#          omit.stat = c("ser","f","adj.rsq"), dep.var.labels = "",
+#          column.labels = c("Linear Model"), title="Preliminary Model")
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+summary(lsdv_mod)
+```
+
+
+### Discussion on Linear Model
+
+> We incorporated dummy variables for the year and across all states. The model doesn't 
+include any other variable, so omitted variable bias could be present. However, 
+the results imply the year is statistically significant and a negative coefficient
+is present across all years. This is consistent with our observations in the EDA,
+where the fatality rate was shown to decrease over time. Driving became safer over
+this period. The dummy variable results are shown in **Table 1**, excluding each 
+of the dummy year variables
+
+# Expanded Model 
+
+### Modeling
+
+```{r checking normality, message=FALSE, warning=FALSE, include=FALSE}
+# testing variables for normality
+#shap_test <- c("total_fatalities_rate", "percent_pop_14_24", "unemployment", "vehic_miles_pc")
+
+#shapiro_test_results <- lapply(shap_test, function(var_name) {
+#  if (var_name != "state" && var_name != "year") {  # Exclude 'state' and 'year' from the test
+#    shapiro_test <- shapiro.test(data[[var_name]])
+#    return(list(Variable = var_name, p_value = shapiro_test$p.value))
+#  }
+#})
+
+#shapiro_test_df <- do.call(rbind, shapiro_test_results)
+
+# print(shapiro_test_df)
+
+```
+
+> We used the Shapiro-Wilks test to test for normality with the total fatalities rate, percent of population 14-24, unemployment, and vehicle miles per capita variables. The test resulted in very small p-values for each, so we decided to log transform these variables in our expanded model.
+
+```{r expanded model, message=FALSE, warning=FALSE, results='asis'}
+# create speed limit over 70 variable
+data <- data %>% 
+  mutate(speed_lim_70 = ifelse(speed_limit == 55 | speed_limit == 65, 0, 1))
+
+
+exp_mod <- plm(
+  log(total_fatalities_rate) ~ minimum_drinking_age + year +
+    blood_alc + 
+    per_se_laws + 
+    primary_seatbelt_law + 
+    secondary_seatbelt_law + 
+    speed_lim_70 + 
+    graduated_drivers_license_law + 
+    log(pct_population_14_to_24) + 
+    log(unemployment_rate) + 
+    log(vehicle_miles_per_capita),
+  index = c("year","Abbreviation"), 
+  model = "pooling", 
+  data=data
+)
+
+#stargazer(exp_mod, type = "text", header=FALSE,
+#          omit.stat = c("ser","f","adj.rsq"), dep.var.labels = "",
+#          column.labels = c("Expanded Model"), title="Expanded Model")
+
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+summary(exp_mod)
+```
+
+
+> Based on the expanded model, the vehicle miles driven per capita, unemployment rate, and percent of population between 14 and 24 were all highly statistically significant. Both per se laws and primary seat belt laws had negative effects on fatality rate. Additionally, per se laws and minimum drinking age laws had less significant but still negative effects on fatality rates. 
+
+> The blood alcohol content (BAC) variable represents the alcohol level at which drivers are considered legally intoxicated. BAC is calculated by Alcohol consumed in grams divided by body weight in grams, then multiplied by a constant that represents biological sex. This number is then multiplied by 100 to give a final measurement of grams per 100mL of blood. The coefficient estimate for the blood alcohol content (BAC) variable in our expanded model is -0.0042982. The negative relationship suggests that stricter blood alcohol content laws may be associated with a decrease in the log-transformed total fatalities rate. However, this impact was not found to be statistically significant (p-value = 0.982275).
+
+> The results are shown alongside the 
+preliminary model in **Table 1**, excluding each of the dummy year variables
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, results='asis'}
+stargazer(lsdv_mod, exp_mod,
+          type = "latex", header=FALSE, omit.stat = c("ser","f","adj.rsq"), 
+          dep.var.labels = "",
+          column.labels = c("Prelim", "Expanded"),
+          keep = c("blood_alc","per_se_laws","primary_seatbelt_law","secondary_seatbelt_law",
+                   "speed_lim_70","graduated_drivers_license_law","pct_population_14_to_24",
+                   "unemployment_rate","vehicle_miles_per_capita"),
+          title="Comparison of Linear Models")
+```
+
+# State-Level Fixed Effects 
+
+### Modeling
+
+```{r state level fixed effects, message=FALSE, warning=FALSE}
+
+if(!"kableExtra"%in%rownames(installed.packages())) {install.packages("kableExtra")}
+library(kableExtra)
+  
+
+# Fixed effects
+within.model <- pvcm(
+  log(total_fatalities_rate) ~ minimum_drinking_age + 
+    blood_alc + 
+    per_se_laws + 
+    primary_seatbelt_law + 
+    secondary_seatbelt_law + 
+    speed_lim_70 + 
+    graduated_drivers_license_law + 
+    log(pct_population_14_to_24) + 
+    log(unemployment_rate) + 
+    log(vehicle_miles_per_capita),
+  data = data, 
+  index=c("Abbreviation", "year"), 
+  effect="individual",
+  model="within"
+)
+```
+
+```{r, warning=FALSE, message=FALSE, include=FALSE, echo=FALSE}
+
+round(coef(within.model),3) %>% 
+  kbl(caption = "Fixed Effect Model with Indivual State Effects") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+> State level fixed effect models are estimated using the `pvcm` function in R, which
+takes advantage of the panel data structure for model estimations and allows for individual
+state effects to be estimated on the control variables found in the expanded model. These individual
+effects were too large to present in a table format so instead they are presented as distributions
+in **Figure 8**.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.width=10, fig.height=5, fig.cap="Estimated Coefficients Across State - Fixed Effect Model"}
+zz1 <- data.frame(coef(within.model)) %>% ggplot(aes(y=blood_alc)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+zz2 <- data.frame(coef(within.model)) %>% ggplot(aes(y=per_se_laws)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz3 <- data.frame(coef(within.model)) %>% ggplot(aes(y=primary_seatbelt_law)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz4 <- data.frame(coef(within.model)) %>% ggplot(aes(y=secondary_seatbelt_law)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz5 <- data.frame(coef(within.model)) %>% ggplot(aes(y=minimum_drinking_age)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz6 <- data.frame(coef(within.model)) %>% ggplot(aes(y=speed_lim_70)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz7 <- data.frame(coef(within.model)) %>% ggplot(aes(y=log.pct_population_14_to_24.)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+zz8 <- data.frame(coef(within.model)) %>% ggplot(aes(y=log.unemployment_rate.)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+zz9 <- data.frame(coef(within.model)) %>% ggplot(aes(y=log.vehicle_miles_per_capita.)) + 
+  geom_boxplot() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+grid.arrange(zz1, zz2, zz3, zz4, zz5, zz6, zz7, zz8, zz9, nrow=2, ncol=5)
+```
+
+### Fixed Effects Discussion
+
+> The estimated coefficients for the model are presented in **Figure 8** across
+the states queried in this dataset (continental US). One can see the variability
+present in the estimates, but clearly some parameters, like the young population and 
+the unemployment rate do not have an IQR which contains zero, indicating a significant 
+effect.
+
+#### Blood Alcohol Affects
+
+> The estimated effects of the blood alcohol content tend to be on the negative end, 
+with an average of -0.3337, with 1Q being -1.37 and 3Q being 0.56 (greater than zero). 
+The fact that the range across states encompasses zero shows this parameter may not
+be very impactful. This is consisent with the OLS results, which generally indicated
+a small impact from this variable and was ultimately not statisticaly significant.
+
+#### Per se Laws
+
+> The estimated effects of per-se laws were much more biased negative than the BAC
+content just described. For the per-se laws, the mean effect was a coefficient of -0.07,
+with a 1Q being -0.16 and 3Q being 0.02. This meant that, on average, for a change
+from 0 to 1, it meant a 7.25% reduction in the fatality rate, per 100K. The pooled
+models found the per-se laws to also be significant, but with a higher impact.
+
+#### Primary Seat Belt Laws
+
+> The estimated effects of primary seat belt laws were found to be on average -0.01,
+with a 1Q of -0.09 and a 3Q of 0.10. This does not appear to be impactful
+in the fixed effects model controlling for each state. This is consistent with
+the results of the expanded model from the previous section.
+
+### Reliability of Estimates
+
+#### Fixed effect model assumptions
+
+* For each 'i' the model is 
+$y_{it} = \beta_1 x_{it1} + ... + \beta_k x_{itk} + a_i + u_{it}, t =1 ..T$
+* We have a random sample from the cross section
+* Each explanatory variable changes over time(for at least some time) and no 
+perfect linear relationship exists between explanatory variables
+* For each t, the expected value of the idiosyncratic error given the explanatory 
+ariables in all time periods and the unobserved effect is zero: $E(u_{it}|X_i, a_i)=0$
+* The variance of the difference errors, conditional on all explanatory variables, 
+is constant $Var(\triangle u_{it} | X_i) = \sigma^2_u, t=2,....,T$. This is 
+required for homoskedastic errors
+* For all $t \neq s$, the differences in the idiosyncratic errors are 
+uncorrelated(conditional on all explanatory variables). This is for serially 
+uncorrelated residuals
+ 
+#### Conclusion on Reliability
+
+> The assumption in an pooled OLS model is that the data is IID. Here in the 
+data set, a sample of a large population is collected on different years. It is 
+unlikely that a particular individual sample data point is measured twice. In 
+such a circumstance a pooled OLS model would be applicable. However in this data set, 
+data granularity is at the state level and the same 
+state is measured multiple times across years. This violates the assumption of 
+IID in the pooled OLS.  A fixed effect model is then expected to be a better model 
+in this scenario. 
+
+\newpage
+# Random Effects Model 
+
+### Modeling
+
+```{r random-effect-model estimate, warning=FALSE, message=FALSE, results='asis'}
+
+random.effect.model <- plm(
+  log(total_fatalities_rate) ~ minimum_drinking_age +
+    blood_alc + 
+    per_se_laws + 
+    primary_seatbelt_law + 
+    secondary_seatbelt_law + 
+    speed_lim_70 + 
+    graduated_drivers_license_law + 
+    log(pct_population_14_to_24) + 
+    log(unemployment_rate) + 
+    log(vehicle_miles_per_capita),
+  index=c("year","state"), 
+  model = "random", 
+  data=data
+)
+```  
+
+```{r, warning=FALSE, message=FALSE, results='asis', echo=FALSE}
+
+stargazer(random.effect.model, type='latex', header=FALSE,
+          omit.stat = c("ser","f","adj.rsq"), 
+          keep = c("blood_alc","per_se_laws","primary_seatbelt_law","secondary_seatbelt_law",
+                   "speed_lim_70","graduated_drivers_license_law","pct_population_14_to_24",
+                   "unemployment_rate","vehicle_miles_per_capita"),
+          dep.var.labels = "", title='Random Effects Model')
+
+```
+
+```{r cftest, message=FALSE, warning=FALSE, include=FALSE, echo=FALSE}
+coeftest(random.effect.model, vcov. = vcovHC, type = "HC1")
+```
+
+### Assumptions of Random Effects
+
+> The first assumption of the random effect model is that there are no perfect 
+linear relationships among the explanatory variables. 
+
+```{r vif for RE model, message=FALSE, warning=FALSE, include=FALSE}
+library(car)
+car::vif(random.effect.model)
+```
+> We see high values for percent_pop_aged_14_to_24, vehicle_miles_per_capita 
+indicating the possible presence of multicollinearity in these variables.
+
+> The second assumption is that there is no correlation between the unobserved 
+random and fixed effects and the explanatory variables. Using a random effects 
+model imposes the error structure that the error term **$v_{it}$** is 
+equal to the sum of variation between groups and variation within groups onto the 
+model residuals, allowing to properly specify the residuals and more efficiently 
+estimate the coefficients of interest. This requires the assumption of independence 
+between random effects and the other predictors in the model. The assumptions for 
+the fixed effect model are discussed above, the additional assumption of independence 
+of random effects and other predictors in the model is evaluated below. The test 
+we run is the Hausman Test for fixed versus random effects. The null hypothesis 
+is that the random effects model is acceptable while the alternative hypothesis 
+is that there is correlation between residuals and predictors, meaning that we 
+should use the FE model.
+
+We conduct a Hausman test for random vs. fixed effects using `phtest`. We perform 
+this test with an $\alpha = 0.05$
+
+```{r, model comparison between within and random efect moidels, message=FALSE, warning=FALSE, include=FALSE}
+
+within.comparison.model <- plm(
+  log(total_fatalities_rate) ~ minimum_drinking_age + 
+    blood_alc + 
+    per_se_laws + 
+    primary_seatbelt_law + 
+    secondary_seatbelt_law + 
+    speed_lim_70 + 
+    graduated_drivers_license_law + 
+    log(pct_population_14_to_24) + 
+    log(unemployment_rate) + 
+    log(vehicle_miles_per_capita),
+  index=c("year","state"), 
+  model = "within", 
+  data=data
+)
+
+res <- phtest(within.comparison.model, random.effect.model)
+#res
+```
+> With a p-value of `r res$p.value` less than $\alpha$, we reject the null 
+hypothesis that random effects are appropriate, suggesting that we should use the 
+fixed models. The random effects model is not likely to be consistent in this case.
+
+> The third assumption is that of homoskedastic errors, which we can test 
+using the Breusch-Pagan Lagrange Multiplier for random effects. Null is no 
+panel effect. In our test, we are able to reject the null hypothsis, again 
+indicating the panel data structure.
+
+```{r pcdtest for Random Effect Model, message=FALSE, warning=FALSE, include=FALSE}
+plmtest(random.effect.model)
+```
+
+### Note on Assumptions
+
+> As we have seen that the assumptions for random effect model are not met. If 
+we were to inappropriately estimate a random effect model, we would be incorrectly 
+assuming that the random effects and other predictors are independent of one another. 
+This would lead to omitted variable bias as the correlation between the random 
+effects and the explanatory variables of interest would not allow for accurate 
+estimation of the coefficient. Standard errors will also be biased as we are 
+assuming that the random effects, which are included in the error term, are 
+incorrectly uncorrelated with the predictors - given that there is correlation, 
+this will introduce bias into the standard errors.
+
+
+# Model Forecasts 
+
+### Data on Vehicle Miles Traveled
+
+> We have downloaded population data from https://fred.stlouisfed.org/series/POPTHM
+and vehicle driven data from https://fred.stlouisfed.org/series/TRFVOLUSM227NFWA.
+Population includes resident population plus armed forces overseas. The monthly 
+estimate is the average of estimates for the first of the month and the first of 
+the following month. Vehicle Miles Traveled and the 12-Month Moving Vehicle Miles 
+Traveled series are created by appending the recent monthly figures from the 
+FHWA’s Traffic Volume Trends to their Historic Monthly Vehicle Miles Traveled 
+(VMT) data file. We have defined the pandemic period between March 2020 through 
+March 2021 when the Covid vaccine became widely available.
+
+```{r, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap="Vehicle Miles Traveled Series from the St. Louis Fed", echo=FALSE}
+library(fredr)
+
+fredr_set_key("cd565a10e83d56f9f1150d5a2c067e2a")
+
+data.vhcl <- fredr(
+                   series_id = "TRFVOLUSM227NFWA",
+                   observation_start = as.Date("2018-01-01"),
+                   observation_end = as.Date("2023-08-01")
+                  ) %>% dplyr::select(date,value) %>% as_tsibble(index = date)
+data.pop <- fredr(
+                  series_id = "POPTHM",
+                  observation_start = as.Date("2018-01-01"),
+                  observation_end = as.Date("2023-08-01")
+                 )%>% dplyr::select(date, value) %>% as_tsibble(index = date)
+
+# Merge vehicle miles driven and population data
+data.temp <- merge(x = data.vhcl, y = data.pop, by = "date")
+
+# Calculate vehicle miles per capita
+data.temp <- data.temp %>% 
+  mutate(vehicle_miles_per_capita = 1000 * value.x / value.y)
+
+data.vhcl.ml.per.capita <- data.temp[, c('date', 'vehicle_miles_per_capita')]
+data.vhcl.ml.per.capita$year = year(data.vhcl.ml.per.capita$date)
+data.vhcl.ml.per.capita$month = month(data.vhcl.ml.per.capita$date)
+
+data.vhcl.ml.per.capita <- data.vhcl.ml.per.capita %>%
+  mutate(group = ifelse(year < 2020, "pre-pandemic",
+               ifelse(year == 2020 | year == 2021, "pandemic", 
+                      "post-pandemic")))
+
+
+data.pre.pandemic <- data.vhcl.ml.per.capita %>% 
+  filter(year == 2018)
+data.pandemic <- data.vhcl.ml.per.capita %>% 
+  filter(year == 2020 | year == 2021)
+data.pandemic.arranged <- data.pandemic %>% 
+  arrange(month)
+
+vehicle_miles_per_capita.diff <- 
+  data.pre.pandemic$vehicle_miles_per_capita - 
+  data.pandemic.arranged$vehicle_miles_per_capita
+
+drive_pandemic <- data.pandemic %>% slice(3:15)
+data.pandemic$group <- 'pandemic'
+data.pre.pandemic$group <- 'pre_pandemic'
+data.pandemic.pre.post.comparison <- rbind(data.pre.pandemic, data.pandemic)
+
+plot.orig <- data.vhcl.ml.per.capita %>% 
+  ggplot(aes(x = date, y = vehicle_miles_per_capita, color=group)) + 
+  geom_line() + xlab("Date") + ylab("Veh. Miles per Capita") +
+  ggtitle('Miles Driven during Pandemic')
+
+plot.comparison <- ggplot(
+  data.pandemic.pre.post.comparison, 
+         aes(x = month, 
+             y = vehicle_miles_per_capita, 
+             group = group)) + 
+  geom_point(aes(color=group)) + 
+  geom_smooth(aes(color=group)) + 
+  xlab('Month') +
+  ylab('Miles Driven') + 
+  ggtitle('Pre/Post Pandemic Miles Driven')
+
+(plot.orig / plot.comparison)
+```
+
+
+### Forecasting changes in driving
+
+```{r assess decrease, message=FALSE, warning=FALSE, echo=FALSE}
+
+max_prepandemic <- max(data.pre.pandemic$vehicle_miles_per_capita)
+min_pandemic    <- min(data.pandemic$vehicle_miles_per_capita)
+delta_miles_perc <- (max_prepandemic - min_pandemic) / max_prepandemic
+
+```
+
+> The pandemic caused a rapid decrease in the vehicle miles traveled per capita.
+To forecast the impact of this decrease, we assessed the pre-pandemic peak to the
+pandemic lull - which was a decrease of around `r round(delta_miles_perc,1)` percent. 
+This is reflected in **Figure 9**, which shows the pre-pandemic data
+population peaking at `r round(max_prepandemic,1)` miles per capita in late 2019 
+decreaseing to `r round(min_pandemic,1)` miles per capita in spring 2020.
+
+> We estimate the impact to the fatality rate by applying the percentage decrease
+to the coefficients estimated by the fixed effects model. Our modeling choice, which
+regressed the log of the fatality rate on the log of the vehicle miles leads to 
+easy math.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, fig.width=6, fig.height=4, fig.cap="Estimating Impact of Miles Traveled Drop During Pandemic"}
+
+effects_of_driving <- 100*coef(within.model)['log(vehicle_miles_per_capita)']*delta_miles_perc
+
+data.frame(effects_of_driving) %>% ggplot(aes(x=log.vehicle_miles_per_capita.)) + 
+  geom_boxplot() + 
+  xlab('Estimated % Change in Fatality Rate') + 
+  ggtitle('Evaluating Impact of Pandemic Drop in Vehicle Miles on Fatality') + 
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+```
+
+> The mean estimated % change in fatality rate from the drop in vehicle miles 
+traveled is `r round(mean(data.frame(effects_of_driving)$log.vehicle_miles_per_capita.),1)`%, 
+with a standard deviation of`r round(sd(data.frame(effects_of_driving)$log.vehicle_miles_per_capita.),1)`%.
+
+
+
+# Evaluate Error 
+
+### Consequences of Serial Correlation / Heteroskadicity
+
+> According to literature, the consequences of serial correlation and heteroskedacity 
+in panel data models is a loss in efficiency of the estimates (Jianhong). This means
+that the true coefficients relative to the estimated coefficients likely
+have higher variance than what is currently estimated in the standard errors.
+
+### Are there serial correlations or heteroskedasticity?
+
+> Yes, while testing the random effects model, we conducted the Lagrange Multiplier
+test and rejected the null hypothesis. We also conducted a Hausman test and rejected the null
+hypothesis. By rejecting the null hypothesis in both cases, we can conclude that
+there exists both serial correlation and heteroskedasticity.
+
+\newpage
+# References
+
+(1) Jianhong Wu, A joint test for serial correlation and heteroscedasticity in fixed-T panel regression 
+models with interactive effects, Economics Letters, Volume 197, 2020, 109594, ISSN 0165-1765, 
+https://doi.org/10.1016/j.econlet.2020.109594. (https://www.sciencedirect.com/science/article/pii/S0165176520303578)
