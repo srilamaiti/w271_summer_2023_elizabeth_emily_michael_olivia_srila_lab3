@@ -14,6 +14,7 @@ library(data.table)
 library(plm)
 library(ggrepel)
 library(ggplot2)
+library(stargazer)
 ```
 
 # U.S. traffic fatalities: 1980-2004
@@ -215,28 +216,6 @@ We incorporate dummy variables for the year and for all states. The model doesn'
 
 # (15 points) Expanded Model (Emily)
 
-Expand the **Preliminary Model** by adding variables related to the following concepts: 
-
-- Blood alcohol levels 
-  No transformation
-- Per se laws
-  No transformation
-- Primary seat belt laws (Note that if a law was enacted sometime within a year the fraction of the year is recorded in place of the zero-one indicator.)
-  No transformation
-- Secondary seat belt laws 
-  No transformation
-- Speed limits faster than 70 
-  Need to transform this variable - the original speed limit variable just had speed limits, but now want limits over 70
-- Graduated drivers licenses 
-  
-- Percent of the population between 14 and 24 years old
-  Log transform
-- Unemployment rate
-  Log transform
-- Vehicle miles driven per capita. 
-  Log?
-
-If it is appropriate, include transformations of these variables. Please carefully explain carefully your rationale, which should be based on your EDA, behind any transformation you made. If no transformation is made, explain why transformation is not needed.
 
 ```{r}
 # create speed limit over 70 variable
@@ -244,23 +223,35 @@ data = data %>% mutate(speed_lim_70 = ifelse(speed_limit == 55 | speed_limit == 
 
 ```
 
-```{r}
+```{r checking normality}
+# testing variables for normality
+shap_test <- c("total_fatalities_rate", "percent_pop_14_24", "unemployment", "vehic_miles_pc")
 
-exp_mod <- plm(log(total_fatalities_rate) ~ year + min_drink_age + state + blood_alc + per_se +
-           primary_seatbelt + secondary_seatbelt + speed_lim_70 + grad_driver_license +
-           log(percent_pop_14_24) + log(unemployment) + log(vehic_miles_pc),
-           index=c("state", "year"), model = "within", data=data)
+shapiro_test_results <- lapply(shap_test, function(var_name) {
+  if (var_name != "state" && var_name != "year") {  # Exclude 'state' and 'year' from the test
+    shapiro_test <- shapiro.test(data[[var_name]])
+    return(list(Variable = var_name, p_value = shapiro_test$p.value))
+  }
+})
 
-summary(exp_mod)
+shapiro_test_df <- do.call(rbind, shapiro_test_results)
+
+print(shapiro_test_df)
 
 ```
-Based on the expanded model, the vehicle miles driven per capita, unemployment rate, percent of population between 14 and 24, as well as per se laws and each year of observation were statistically significant.  
+We used the Shapiro-Wilks test to test for normality with the total fatalities rate, percent of population 14-24, unemployment, and vehicle miles per capita variables. The test resulted in very small p-values for each, so we decided to log transform these variables in our expanded model.
 
-- How are the blood alcohol variables defined? Interpret the coefficients that you estimate for this concept. 
-- Do *per se laws* have a negative effect on the fatality rate? 
-- Does having a primary seat belt law? 
+```{r}
+exp_mod <- plm(log(total_fatalities_rate) ~ year + min_drink_age + blood_alc + per_se +
+           primary_seatbelt + secondary_seatbelt + speed_lim_70 + grad_driver_license +
+           log(percent_pop_14_24) + log(unemployment) + log(vehic_miles_pc),
+           index=c("state", "year"), model = "pooling", data=data)
 
+summary(exp_mod)
+```
+Based on the expanded model, the vehicle miles driven per capita, unemployment rate, and percent of population between 14 and 24 were all highly statistically significant. Both per se laws and primary seat belt laws had negative effects on fatality rate. Additionally, per se laws and minimum drinking age laws had less significant but still negative effects on fatality rates. 
 
+The blood alcohol content (BAC) variable represents the alcohol level at which drivers are considered legally intoxicated. BAC is calculated by Alcohol consumed in grams divided by body weight in grams, then multiplied by a constant that represents biological sex. This number is then multiplied by 100 to give a final measurement of grams per 100mL of blood. The coefficient estimate for the blood alcohol content (BAC) variable in our expanded model is -0.0042982. The negative relationship suggests that stricter blood alcohol content laws may be associated with a decrease in the log-transformed total fatalities rate. However, this impact was not found to be statistically significant (p-value = 0.982275). 
 
 
 
